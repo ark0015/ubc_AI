@@ -1,3 +1,4 @@
 numpy>=1.17
 scipy>=1.0.0
 presto>=3.0
+matplotlib>=2.0.0

@@ -5,4 +5,4 @@
 import unittest
 
 import numpy as np
-from . import ubc_ai
+from ubc_AI.pfdviewer import MainFrameGTK

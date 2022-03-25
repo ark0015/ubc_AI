@@ -15,44 +15,45 @@ from scipy.optimize import fmin_cg
 import sys
 from sklearn.base import BaseEstimator
 
-#Aaron's fortran-optimized openmp code
+# Aaron's fortran-optimized openmp code
 try:
     from nnopt import sigmoid2d, matmult
+
     _fort_opt = True
-except(ImportError):
-    print "NeuralNetwork not using fortran-optimized code"
-    print "Refer to nn_optimize.f90 for tips"
-    print "defaulting to vectorized numpy implementation"
+except (ImportError):
+    print("NeuralNetwork not using fortran-optimized code")
+    print("Refer to nn_optimize.f90 for tips")
+    print("defaulting to vectorized numpy implementation")
     _fort_opt = False
 
-#number of iterations in training
+# number of iterations in training
 _niter = 0
 
+
 def main():
-    """ not really used """
-################
-# load the data 
-    data = handwritingpix(samples='ex4data1.mat',
-                          thetas='ex4weights.mat'                              
-                          )
-################
-# show some samples of the data
+    """not really used"""
+    ################
+    # load the data
+    data = handwritingpix(samples="ex4data1.mat", thetas="ex4weights.mat")
+    ################
+    # show some samples of the data
     data.plot_samples(15)
-###############
-# create the neural network, 
-    nn = NeuralNetwork(gamma=0.)
+    ###############
+    # create the neural network,
+    nn = NeuralNetwork(gamma=0.0)
+
 
 def load_pickle(fname):
     """
     recover from a pickled NeuralNetwork classifier
 
-    the neural design (nfeatures, nlayers, ntargets) are 
-    determined by the 'thetas' in the pickle 
+    the neural design (nfeatures, nlayers, ntargets) are
+    determined by the 'thetas' in the pickle
 
     """
-    d = cPickle.load(open(fname,'r'))
-    nlayers = d['nlayers']
-    gamma = d['gamma']
+    d = cPickle.load(open(fname, "r"))
+    nlayers = d["nlayers"]
+    gamma = d["gamma"]
     thetas = []
     for li in range(nlayers):
         thetas.append(d[li])
@@ -63,11 +64,11 @@ def load_pickle(fname):
 
 class layer(object):
     """
-    a layer in the neural network. It takes 
+    a layer in the neural network. It takes
     in N parameters and outputs m attributes
 
     N and m should include the bias term (if appropriate)
-    
+
     output = Theta*trial_colvector
 
     optional:
@@ -78,8 +79,9 @@ class layer(object):
     shiftlayer = False. If true, we repeat the first neuron weightings, shifted.
 
     """
+
     def __init__(self, n, m, theta=np.array([]), delta=0, shiftlayer=False):
-        #n includes bias
+        # n includes bias
         self.inp = n
         self.output = m
         self.shiftlayer = shiftlayer
@@ -88,7 +90,7 @@ class layer(object):
         else:
             # use random initialization
             if not delta:
-                delta = np.sqrt(6)/np.sqrt(n + m)
+                delta = np.sqrt(6) / np.sqrt(n + m)
             self.randomize(delta)
 
     def randomize(self, delta=None):
@@ -98,16 +100,17 @@ class layer(object):
         N = self.inp
         m = self.output
         if not delta:
-            delta = np.sqrt(6)/np.sqrt( N + m)
-        self.theta = np.random.uniform(-delta, delta, N*m).reshape(N, m)
+            delta = np.sqrt(6) / np.sqrt(N + m)
+        self.theta = np.random.uniform(-delta, delta, N * m).reshape(N, m)
 
         if self.shiftlayer:
-            #make sure the subsequent layers are simply a shifted copy of the first
-            l1 = self.theta[:,0]
-            dshift = N//m
-            for i in range(m-1):
-                shift = dshift * (i+1)
-                self.theta[:,i+1] = np.roll(l1, shift)
+            # make sure the subsequent layers are simply a shifted copy of the first
+            l1 = self.theta[:, 0]
+            dshift = N // m
+            for i in range(m - 1):
+                shift = dshift * (i + 1)
+                self.theta[:, i + 1] = np.roll(l1, shift)
+
 
 class NeuralNetwork(BaseEstimator):
     """
@@ -120,7 +123,7 @@ class NeuralNetwork(BaseEstimator):
               (default = None, defers until .fit call)
     * design = None (initialize the NN with neurons/layers determined
               by the list of neurons per layer
-              Eg. desing=[25,4] = 2-layers, first with 25, second with 4 
+              Eg. desing=[25,4] = 2-layers, first with 25, second with 4
     * fit_type = ['all','single'] . Fit the individual layers 'all' at once (default)
                               or build up the NN, fitting a 'single' layer at a time,
                               then adding the next layer.
@@ -130,16 +133,25 @@ class NeuralNetwork(BaseEstimator):
                  we reproduce the first neuron N-times, shifting the weights of the first one.
                  This is meant to help remove phase-dependence of the pulse.
                  shiftlayer in [0, 1, 2, ...] number of hidden layers
-    
-    Notes: 
+
+    Notes:
     * if design != None and thetas != None, we get shape
       from the thetas
 
     * if design = thetas = None, we determine design in fit routine
 
     """
-    def __init__(self, gamma=0., thetas=None, design=None,
-                 fit_type='all', maxiter=None, shiftlayer=None, verbose=False):
+
+    def __init__(
+        self,
+        gamma=0.0,
+        thetas=None,
+        design=None,
+        fit_type="all",
+        maxiter=None,
+        shiftlayer=None,
+        verbose=False,
+    ):
         self.gamma = gamma
         self.design = design
         self.fit_type = fit_type
@@ -151,15 +163,28 @@ class NeuralNetwork(BaseEstimator):
             self.maxiter = maxiter
         self.shiftlayer = shiftlayer
         if thetas != None:
-            nfeatures = thetas[0].shape[0]-1
+            nfeatures = thetas[0].shape[0] - 1
             ntargets = thetas[1].shape[1]
-            self.create_layers(nfeatures, ntargets, thetas=thetas, verbose=verbose,\
-                                   shiftlayer=shiftlayer)
+            self.create_layers(
+                nfeatures,
+                ntargets,
+                thetas=thetas,
+                verbose=verbose,
+                shiftlayer=shiftlayer,
+            )
         self.verbose = verbose
-        self.nfit = 0 # keep track of number of times the classifier has been 'fit'
+        self.nfit = 0  # keep track of number of times the classifier has been 'fit'
 
-    def create_layers(self, nfeatures, ntargets, design=None, gamma=None,
-                      thetas=None, verbose=None, shiftlayer=None):
+    def create_layers(
+        self,
+        nfeatures,
+        ntargets,
+        design=None,
+        gamma=None,
+        thetas=None,
+        verbose=None,
+        shiftlayer=None,
+    ):
         """
         This routine is called by 'fit', and adjust the network design
         for varying feature and target length, as well as network design.
@@ -167,8 +192,8 @@ class NeuralNetwork(BaseEstimator):
         Args:
         nfeatures: number of features
         ntargets : number of target labels
-        design : list of neurons per layer. 
-             Default = None, use self.design (if provided at init), 
+        design : list of neurons per layer.
+             Default = None, use self.design (if provided at init),
                  otherwise default to [16] = one layer of 16 neurons
             Eg. design=[16,4] = a layer of 16 neurons, then a layer of 4 neurons
         gamma : update self.gamma, the regularization parameter
@@ -177,7 +202,7 @@ class NeuralNetwork(BaseEstimator):
                       This overrides 'design'
         shiftlayer = None: if not None, the theta is simply a shifted repeat of the first neuron
                            in this layer
-                   
+
         """
         if design == None:
             if self.design != None:
@@ -204,13 +229,13 @@ class NeuralNetwork(BaseEstimator):
             else:
                 theta = np.array([])
 
-# add bias to all inputs
+            # add bias to all inputs
             if idx == 0:
-                lin = nfeatures + 1 #add bias
-            else: 
+                lin = nfeatures + 1  # add bias
+            else:
                 lin = design[idx - 1] + 1
 
-# add bias to outputs for internal/hidden layers
+            # add bias to outputs for internal/hidden layers
             if idx == nl - 1:
                 lout = ntargets
             else:
@@ -222,7 +247,7 @@ class NeuralNetwork(BaseEstimator):
                     layers.append(layer(lin, lout, theta, shiftlayer=False))
             else:
                 layers.append(layer(lin, lout, theta, shiftlayer=False))
-                
+
         if verbose or self.verbose:
             txt = "Created (network,  gamma) = (%s-->" % (nfeatures)
             for idx in design:
@@ -234,12 +259,11 @@ class NeuralNetwork(BaseEstimator):
         self.layers = layers
         self.nlayers = len(layers)
 
-
     def unflatten_thetas(self, thetas):
         """
-        in order to use scipy.fmin functions we 
+        in order to use scipy.fmin functions we
         need to make the Theta dependance explicit.
-        
+
         This routine takes a flattened array 'thetas' of
         all the internal layer 'thetas', then assigns them
         onto their respective layers
@@ -280,14 +304,14 @@ class NeuralNetwork(BaseEstimator):
     def costFunction(self, thetas, X, y, gamma=None, verbose=None):
         """
         determine the cost function for this neural network
-        given the training data X, classifcations y, 
+        given the training data X, classifcations y,
         and learning rate (regularization) lambda
 
         Arguments:
         X : num_trials x ninputs, ninputs not including bias term
         return cost
         y : classification label for the num_trials
-        gamma : regularization parameter, 
+        gamma : regularization parameter,
                default = None = self.gamma
         verbose: printing out training information (cost, #iterations)
 
@@ -295,40 +319,41 @@ class NeuralNetwork(BaseEstimator):
         global _niter
         if isinstance(X, type([])):
             X = np.array(X)
-        
+
         if gamma == None:
             gamma = self.gamma
 
-# testing: check the theta's are changing while we train: yes!
-#        print "CF",thetas[0:2], thetas[-5:-2]
+        # testing: check the theta's are changing while we train: yes!
+        #        print("CF",thetas[0:2], thetas[-5:-2])
 
-# update the layer's theta's
+        # update the layer's theta's
         self.unflatten_thetas(thetas)
-        
+
         # number of trials
         if X.ndim == 2:
-            N = X.shape[0] 
+            N = X.shape[0]
         else:
             N = 1
 
         # propagate the input through the entire network
         z, h = self.forward_propagate(X)
         yy = labels2vectors(y, self.ntargets)
- 
-        J = 0.
-        J = (-np.log(h) * yy.transpose() - np.log(1-h)*(1-yy.transpose())).sum()
-        J = J/N
 
-# regularize (ignoring bias):
-        reg = 0.
+        J = 0.0
+        J = (-np.log(h) * yy.transpose() - np.log(1 - h) * (1 - yy.transpose())).sum()
+        J = J / N
+
+        # regularize (ignoring bias):
+        reg = 0.0
         for l in self.layers:
-            reg +=  (l.theta[1:, :]**2).sum()
-        J = J + gamma*reg/(2*N)
-        
+            reg += (l.theta[1:, :] ** 2).sum()
+        J = J + gamma * reg / (2 * N)
+
         if verbose or self.verbose:
             if _niter % 25 == 0:
-                sys.stdout.write("\r\t(fit %s) NN.fit iter %s, Cost %12.7f "
-                                 % (self.nfit,_niter, J))
+                sys.stdout.write(
+                    "\r\t(fit %s) NN.fit iter %s, Cost %12.7f " % (self.nfit, _niter, J)
+                )
                 sys.stdout.flush()
         _niter += 1
         return J
@@ -339,7 +364,7 @@ class NeuralNetwork(BaseEstimator):
         propagate the sample through the neural network,
         Returns:
         z, a : the ouputs and activations (z(nl),acts(nl)) at layer nl
-        
+
         Args:
         X = [nsamples, nproperties] (no bias)
         nl = number of layers to propagte through
@@ -349,7 +374,7 @@ class NeuralNetwork(BaseEstimator):
             z = np.array(z)
         # number of trials
         if z.ndim == 2:
-            N = z.shape[0] 
+            N = z.shape[0]
             # add bias
             a = np.hstack([np.ones((N, 1)), z])
         else:
@@ -391,17 +416,17 @@ class NeuralNetwork(BaseEstimator):
         """
         thetas = self.flatten_thetas()
         return self.gradient(thetas, X, y, gamma, verbose=verbose)
-        
+
     def gradient(self, thetas, X, y, gamma=None, verbose=None):
         """
         compute the gradient at each layer of the neural network
-        
+
         Args:
         X = [nsamples, ninputs]
         y = [nsamples] #the training classifications
         gamma : regularization parameter
                default = None = self.gamma
-        shiftlayer : None, or the layer which 
+        shiftlayer : None, or the layer which
 
         returns the gradient for the parameters of the neural network
         (the theta's) unrolled into one large vector, ordered from
@@ -416,65 +441,68 @@ class NeuralNetwork(BaseEstimator):
 
         N = X.shape[0]
         nl = len(self.layers)
-# create our grad_theta arrays (init to zero):
+        # create our grad_theta arrays (init to zero):
         grads = {}
         for li, lv in enumerate(self.layers):
             grads[li] = np.zeros_like(lv.theta)
 
-# vectorize sample-loop
+        # vectorize sample-loop
         if 1:
             for li in range(nl, 0, -1):
-                z, a = self.forward_propagate(X,li)
+                z, a = self.forward_propagate(X, li)
 
                 if li == nl:
                     ay = labels2vectors(y, self.ntargets).transpose()
-                    delta = (a - ay)
+                    delta = a - ay
                 else:
                     theta = self.layers[li].theta
-                    aprime = np.hstack([np.ones((N,1)), sigmoidGradient(z)]) #add in bias
-#use fortran matmult if arrays are large
+                    aprime = np.hstack(
+                        [np.ones((N, 1)), sigmoidGradient(z)]
+                    )  # add in bias
+                    # use fortran matmult if arrays are large
                     if _fort_opt and deltan.size * theta.size > 100000:
-                       tmp = matmult(deltan,theta.transpose())
+                        tmp = matmult(deltan, theta.transpose())
                     else:
-                       tmp = np.dot(deltan,theta.transpose())#nsamples x neurons(li)
-                    delta = tmp*aprime
-                    
-#find contribution to grad
+                        tmp = np.dot(
+                            deltan, theta.transpose()
+                        )  # nsamples x neurons(li)
+                    delta = tmp * aprime
+
+                # find contribution to grad
                 idx = li - 1
-                z, a = self.forward_propagate(X,idx)
+                z, a = self.forward_propagate(X, idx)
                 if idx in grads:
                     if li == nl:
-                        grads[idx] = np.dot(a.transpose(), delta)/N
+                        grads[idx] = np.dot(a.transpose(), delta) / N
                     else:
-                        #strip off bias
-                        grads[idx] = np.dot(a.transpose(), delta[:,1:])/N
+                        # strip off bias
+                        grads[idx] = np.dot(a.transpose(), delta[:, 1:]) / N
 
-#if this is a "shift-invar" layer, find the average grad 
+                # if this is a "shift-invar" layer, find the average grad
                 if self.shiftlayer is not None:
                     if li == self.shiftlayer:
                         shape = self.layers[li].theta.shape
                         grads = grads.reshape(shape)
-                        l1 = grads[:,0]
-                        dshift = N//m
-                        for i in range(m-1):
-                            shift = -dshift * (i+1) #undo the previous shifts
-                            self.theta[:,i+1] = np.roll(l1, shift)
+                        l1 = grads[:, 0]
+                        dshift = N // m
+                        for i in range(m - 1):
+                            shift = -dshift * (i + 1)  # undo the previous shifts
+                            self.theta[:, i + 1] = np.roll(l1, shift)
                         grad_avg = self.theta.mean(axis=0)
                         grads = np.array([grad_avg for i in range(shape[1])]).flatten()
 
-#keep this delta for the next (earlier) layer
+                # keep this delta for the next (earlier) layer
                 if li == nl:
                     deltan = delta
                 else:
-                    deltan = delta[:,1:]
+                    deltan = delta[:, 1:]
 
-
-#now regularize the grads (bias doesn't get get regularized):
+        # now regularize the grads (bias doesn't get get regularized):
         for li, lv in enumerate(self.layers):
             theta = lv.theta
-            grads[li][:, 1:] = grads[li][:, 1:] + gamma/N*theta[:, 1:]
-            
-#finally, flatten the gradients
+            grads[li][:, 1:] = grads[li][:, 1:] + gamma / N * theta[:, 1:]
+
+        # finally, flatten the gradients
         z = np.array([])
         for k in sorted(grads):
             v = grads[k]
@@ -499,15 +527,26 @@ class NeuralNetwork(BaseEstimator):
         """
         return np.mean(self.predict(X) == y)
 
-    def fit(self, X, y, design=None, gamma=None,
-            gtol=1e-05, epsilon=1.4901161193847656e-08, maxiter=None,
-            raninit=True, info=False, verbose=None, fit_type=None):
+    def fit(
+        self,
+        X,
+        y,
+        design=None,
+        gamma=None,
+        gtol=1e-05,
+        epsilon=1.4901161193847656e-08,
+        maxiter=None,
+        raninit=True,
+        info=False,
+        verbose=None,
+        fit_type=None,
+    ):
         """
         Train the data.
         minimize the cost function (wrt the Theta's)
         (using the conjugate gradient algorithm from scipy)
         This updates the NN.layers.theta's, so one can
-        later "predict" other samples. 
+        later "predict" other samples.
         ** The number of input features is determined from X.shape[1],
         and the number of targets from np.unique(y), so make sure
         'y' spans your target space.
@@ -515,21 +554,21 @@ class NeuralNetwork(BaseEstimator):
         Args:
         X : the training samples [nsamples x nproperties]
         y : the sample labels [nsamples], each entry in range 0<=y<nclass
-        design : list of number of neurons in each layer. 
+        design : list of number of neurons in each layer.
              Default = None, uses self.create_layers default=[16]
              Eg. design=[12,3] is a neural network with 2 layers of 12, then 3 neurons
                  (we add bias later)
         gamma : regularization parameter
                default = None = self.gammas
-        verbose : print out layer-creation information
+        verbose : print(out layer-creation information
         *for scipy.optimize.fmin_cg:
         gtol
         epsilon
         maxiter
         info : T/F, return the information from fmin_cg (Default False)
-        
+
         raninit : T/F randomly initialize the theta's [default = True]
-                (only use 'False' to continue training, not for new NN's) 
+                (only use 'False' to continue training, not for new NN's)
         """
         global _niter
         _niter = 0
@@ -542,33 +581,36 @@ class NeuralNetwork(BaseEstimator):
             fit_type = self.fit_type
         if maxiter == None:
             maxiter = self.maxiter
-            
+
         # train all layers at same time
-        if fit_type == 'all':
-    #update the NN layers (if necessary)
+        if fit_type == "all":
+            # update the NN layers (if necessary)
             if raninit:
-                self.create_layers(X.shape[1], 
-                                   np.unique(y).size, 
-                                   design=design,
-                                   gamma=gamma,
-                                   verbose=verbose,
-                                   shiftlayer=self.shiftlayer)
+                self.create_layers(
+                    X.shape[1],
+                    np.unique(y).size,
+                    design=design,
+                    gamma=gamma,
+                    verbose=verbose,
+                    shiftlayer=self.shiftlayer,
+                )
                 for lv in self.layers:
                     lv.randomize()
 
             thetas = self.flatten_thetas()
-            xopt = fmin_cg(f=self.costFunction,
-                           x0=thetas,
-                           fprime=self.gradient,
-                           args=(X, y, gamma, verbose), #extra args to costFunction 
-                           maxiter=maxiter,
-                           epsilon=epsilon,
-                           gtol=gtol,
-                           disp=0,
-                           )
+            xopt = fmin_cg(
+                f=self.costFunction,
+                x0=thetas,
+                fprime=self.gradient,
+                args=(X, y, gamma, verbose),  # extra args to costFunction
+                maxiter=maxiter,
+                epsilon=epsilon,
+                gtol=gtol,
+                disp=0,
+            )
 
         # build up the NN, training each layer one at a time
-        elif fit_type == 'single':
+        elif fit_type == "single":
             if design == None:
                 design = self.design
             if self.nin == None:
@@ -579,56 +621,73 @@ class NeuralNetwork(BaseEstimator):
             thetas = []
             for lyr in range(len(design)):
                 if verbose:
-                    print "\nTraining layer %s" % (lyr+1)
-                nn = NeuralNetwork(gamma = gamma,
-                                   design = design[0:lyr+1],
-                                   fit_type='all'
-                                   )
-                nn.create_layers(self.nin, 
-                                 self.nout,
-                                 design=design[0:lyr+1],
-                                 gamma=gamma,
-                                 verbose=verbose,
-                                 shiftlayer=self.shiftlayer)
+                    print("\nTraining layer %s" % (lyr + 1))
+                nn = NeuralNetwork(
+                    gamma=gamma, design=design[0 : lyr + 1], fit_type="all"
+                )
+                nn.create_layers(
+                    self.nin,
+                    self.nout,
+                    design=design[0 : lyr + 1],
+                    gamma=gamma,
+                    verbose=verbose,
+                    shiftlayer=self.shiftlayer,
+                )
                 for lyri, theta in enumerate(thetas):
                     nn.layers[lyri].theta = theta
-                nn.fit(X, y,
-                       gtol=gtol, epsilon=epsilon, maxiter=maxiter,
-                       raninit=False, info=info, verbose=verbose)
-                thetas =[nn.layers[i].theta for i in range(lyr+1)] 
-#.append(nn.layers[lyr].theta)
-            #end design loop
+                nn.fit(
+                    X,
+                    y,
+                    gtol=gtol,
+                    epsilon=epsilon,
+                    maxiter=maxiter,
+                    raninit=False,
+                    info=info,
+                    verbose=verbose,
+                )
+                thetas = [nn.layers[i].theta for i in range(lyr + 1)]
+            # .append(nn.layers[lyr].theta)
+            # end design loop
 
-# (diagnostics)
-#                if verbose:
-#                    nn.plot_firstlayer()
+            # (diagnostics)
+            #                if verbose:
+            #                    nn.plot_firstlayer()
 
             # transfer the Theta's to our NN
-            self.create_layers(X.shape[1], 
-                               np.unique(y).size, 
-                               design=design,
-                               gamma=gamma,
-                               verbose=verbose,
-                               shiftlayer=self.shiftlayer)
-#            for lyri, theta in enumerate(thetas):
-#                self.layers[lyri].theta = theta
+            self.create_layers(
+                X.shape[1],
+                np.unique(y).size,
+                design=design,
+                gamma=gamma,
+                verbose=verbose,
+                shiftlayer=self.shiftlayer,
+            )
+            #            for lyri, theta in enumerate(thetas):
+            #                self.layers[lyri].theta = theta
             for lyri, lyr in enumerate(nn.layers):
                 self.layers[lyri].theta = lyr.theta
 
-#            print "N",len(self.layers),self.layers[-1].theta[0:3,0:3]
-#            print "O",len(thetas),thetas[-1][0:3,0:3]
-           
-            self.fit(X, y,
-                     gtol=gtol, epsilon=epsilon, maxiter=maxiter,
-                     raninit=False, info=info, verbose=verbose,
-                     fit_type='all') 
-                                   
+            #            print("N",len(self.layers),self.layers[-1].theta[0:3,0:3])
+            #            print("O",len(thetas),thetas[-1][0:3,0:3])
+
+            self.fit(
+                X,
+                y,
+                gtol=gtol,
+                epsilon=epsilon,
+                maxiter=maxiter,
+                raninit=False,
+                info=info,
+                verbose=verbose,
+                fit_type="all",
+            )
+
         self.nfit += 1
 
         if info:
             print("\n")
             return xopt
-        
+
     def predict(self, X):
         """
         Given a list of samples, predict their class.
@@ -639,23 +698,23 @@ class NeuralNetwork(BaseEstimator):
 
         returns:
         y = [nsamples]
-        
+
         """
         if isinstance(X, type([])):
             X = np.array(X)
         if len(X.shape) == 2:
-            N = X.shape[0] 
+            N = X.shape[0]
         else:
             N = 1
 
-        z, h  = self.forward_propagate(X)
-        #find most-active label
+        z, h = self.forward_propagate(X)
+        # find most-active label
         if N == 1:
             cls = np.array([h.argmax()])
         else:
             cls = h.argmax(axis=1)
         return cls
-    
+
     def predict_proba(self, X):
         """
         Compute the likehoods each possible outcomes of samples in T.
@@ -675,11 +734,11 @@ class NeuralNetwork(BaseEstimator):
         if isinstance(X, type([])):
             X = np.array(X)
         if len(X.shape) == 2:
-            N = X.shape[0] 
+            N = X.shape[0]
         else:
             N = 1
 
-        z, h  = self.forward_propagate(X)
+        z, h = self.forward_propagate(X)
         norm = h.sum(axis=1)
         for ni, nv in enumerate(norm):
             h[ni] = h[ni] / nv
@@ -688,15 +747,15 @@ class NeuralNetwork(BaseEstimator):
     def score_weiwei(self, X, y, verbose=None):
         """
         Returns the mean accuracy on the given test data and labels
-    
+
         Parameters
         ----------
         X : array-like, shape = [n_samples, n_features]
         Training set.
-        
+
         y : array-like, shape = [n_samples]
         Labels for X.
-        
+
         Returns
         -------
         z : float
@@ -707,43 +766,50 @@ class NeuralNetwork(BaseEstimator):
         for cls in range(self.ntargets):
             pred_cls[cls] = set([])
             true_cls[cls] = set([])
-            
+
         for i, s in enumerate(X):
             predict = self.predict(s)[0]
             true_cls[y[i]].add(i)
             pred_cls[y[i]].add(i)
 
-        tot_acc = 0.
+        tot_acc = 0.0
         for k in range(self.ntargets):
             hit = pred_cls[k] & true_cls[k]
             miss = pred_cls[k] - true_cls[k]
-            falsepos = true_cls[k] - pred_cls[k] 
+            falsepos = true_cls[k] - pred_cls[k]
             precision = np.divide(float(len(hit)), len(pred_cls[k]))
             recall = np.divide(float(len(hit)), len(true_cls[k]))
-            accuracy = (np.divide(float(len(hit)), len(true_cls[k])) * 100)
+            accuracy = np.divide(float(len(hit)), len(true_cls[k])) * 100
             tot_acc += accuracy
             if verbose or self.verbose:
-                print "\nClass %s:" % k
-                print 'accuracy: ', '%.0f%%' % (np.divide(float(len(hit)),len(true_cls[k])) * 100)
-                print 'miss: ', '%.0f%%' % (np.divide(float(len(miss)),len(true_cls[k])) * 100)
-                print 'false positives: ', '%.0f%%' % (np.divide(float(len(falsepos)),len(pred_cls[k]))* 100)
-                print 'precision: ', '%.0f%%' % (precision* 100)
-                print 'recall: ', '%.0f%%' % (recall* 100)
+                print("\nClass %s:" % k)
+                print(
+                    "accuracy: ",
+                    "%.0f%%" % (np.divide(float(len(hit)), len(true_cls[k])) * 100),
+                )
+                print(
+                    "miss: ",
+                    "%.0f%%" % (np.divide(float(len(miss)), len(true_cls[k])) * 100),
+                )
+                print(
+                    "false positives: ",
+                    "%.0f%%"
+                    % (np.divide(float(len(falsepos)), len(pred_cls[k])) * 100),
+                )
+                print("precision: ", "%.0f%%" % (precision * 100))
+                print("recall: ", "%.0f%%" % (recall * 100))
 
         z = tot_acc / self.ntargets
         return z
 
-    def learning_curve(self, X, y,
-                       Xval=None, 
-                       yval=None,
-                       gamma=None,
-                       pct=0.6,
-                       plot=False):
+    def learning_curve(
+        self, X, y, Xval=None, yval=None, gamma=None, pct=0.6, plot=False
+    ):
         """
         returns the training and cross validation set errors
         for a learning curve
         (good for exploring effect of number of training samples)
-        
+
         Args:
         X : training data
         y : training value
@@ -755,12 +821,12 @@ class NeuralNetwork(BaseEstimator):
                        only if Xval = None
                        default pct = 0.6
         plot : False/[True] optionally plot the learning curve
-        
+
         Note: if Xval == None, then we assume (X,y) is the entire set of data,
               and we split them up using split_data(data,target)
 
         returns three vectors of length(ntrials):
-        error_train : training error for the N=length(pct*X) 
+        error_train : training error for the N=length(pct*X)
         error_val : error on x-val data, when trainined on "i" samples
         ntrials
 
@@ -770,7 +836,7 @@ class NeuralNetwork(BaseEstimator):
         * a high error indicates lots of bias,
           that you are probably underfitting the problem
           (so add more neurons/layers, or lower regularization)
-         
+
         * for lots of trials, a high gap between training_error
           and test_error (x-val error) indicates lots of variance
           (you are over-fitting, so remove some neurons/layers,
@@ -784,41 +850,38 @@ class NeuralNetwork(BaseEstimator):
             gamma = self.gamma
 
         m = X.shape[0]
-#need at least one training item...
-        stepsize = max(m/25,1)
-        ntrials = range(1,m,stepsize)
+        # need at least one training item...
+        stepsize = max(m / 25, 1)
+        ntrials = range(1, m, stepsize)
         mm = len(ntrials)
         t_error = np.zeros(mm)
         v_error = np.zeros(mm)
         for i, v in enumerate(ntrials):
-            #fit with regularization
-            self.fit(X[0:v+1], y[0:v+1], gamma=gamma, maxiter=50, raninit=True)
-            
+            # fit with regularization
+            self.fit(X[0 : v + 1], y[0 : v + 1], gamma=gamma, maxiter=50, raninit=True)
+
             # but compute error without regularization
-            t_error[i] = self.costFunctionU(X[0:v+1], y[0:v+1], gamma=0.)
+            t_error[i] = self.costFunctionU(X[0 : v + 1], y[0 : v + 1], gamma=0.0)
             # use entire x-val set
-            v_error[i] = self.costFunctionU(Xval, yval, gamma=0.)
-            
+            v_error[i] = self.costFunctionU(Xval, yval, gamma=0.0)
+
         if plot:
-            plt.plot(ntrials, t_error, 'r+', label='training')
-            plt.plot(ntrials, v_error, 'bx', label='x-val')
-            plt.xlabel('training set size')
-            plt.ylabel('error [J(gamma=0)]')
+            plt.plot(ntrials, t_error, "r+", label="training")
+            plt.plot(ntrials, v_error, "bx", label="x-val")
+            plt.xlabel("training set size")
+            plt.ylabel("error [J(gamma=0)]")
             plt.legend()
             plt.show()
 
         return t_error, v_error, ntrials
 
-    def validation_curve(self, X, y,
-                         Xval=None, 
-                         yval=None,
-                         gammas=None,
-                         pct=0.6,
-                         plot=False):
+    def validation_curve(
+        self, X, y, Xval=None, yval=None, gammas=None, pct=0.6, plot=False
+    ):
         """
-        use a cross-validation set to evaluate various regularization 
+        use a cross-validation set to evaluate various regularization
         parameters (gamma)
-        
+
         specifically:
         train the NN, then loop over a range of regularization parameters
         and select best 'gamma' (=min(costFunction(cross-val data))
@@ -834,7 +897,7 @@ class NeuralNetwork(BaseEstimator):
                 default None uses
                 [0., 0.0001, 0.0005, 0.001, 0.05, 0.1, .5, 1, 1.5, 15]
         plot : False/[True] optionally plot the validation cure
-        
+
         Note: if Xval == None, then we assume (X,y) is the entire set of data,
               and we split them up using split_data(data,target)
               Again, we train with regularization, but the erorr
@@ -846,25 +909,25 @@ class NeuralNetwork(BaseEstimator):
         """
         if Xval == None:
             X, y, Xval, yval = split_data(X, y, pct)
-        
+
         if gammas == None:
-            gammas = [0., 0.0001, 0.0005, 0.001, 0.05, 0.1, .5, 1., 1.5, 15.]
-        
+            gammas = [0.0, 0.0001, 0.0005, 0.001, 0.05, 0.1, 0.5, 1.0, 1.5, 15.0]
+
         train_error = np.zeros(len(gammas))
         xval_error = np.zeros(len(gammas))
         for gi, gv in enumerate(gammas):
-#train with reg.
+            # train with reg.
             self.fit(X, y, gamma=gv, maxiter=40, raninit=True)
-           
-#evaluate error without reg. 
-            train_error[gi] = self.costFunctionU(X, y, gamma=0.)
-            xval_error[gi] = self.costFunctionU(Xval, yval, gamma=0.)
+
+            # evaluate error without reg.
+            train_error[gi] = self.costFunctionU(X, y, gamma=0.0)
+            xval_error[gi] = self.costFunctionU(Xval, yval, gamma=0.0)
 
         if plot:
-            plt.plot(gammas, train_error, label='Train')
-            plt.plot(gammas, xval_error, label='Cross Validation')
-            plt.xlabel('gamma')
-            plt.ylabel('Error [costFunction]')
+            plt.plot(gammas, train_error, label="Train")
+            plt.plot(gammas, xval_error, label="Cross Validation")
+            plt.xlabel("gamma")
+            plt.ylabel("Error [costFunction]")
             plt.legend()
             plt.show()
 
@@ -887,28 +950,28 @@ class NeuralNetwork(BaseEstimator):
         numgrad = np.zeros(thetas.size)
         perturb = np.zeros(thetas.size)
 
-        delta = 1.e-4
+        delta = 1.0e-4
 
         for p in range(numgrad.size):
-            #set the perturbation vector
+            # set the perturbation vector
             perturb[p] = delta
             loss1 = self.costFunction(thetas - perturb, X, y)
             loss2 = self.costFunction(thetas + perturb, X, y)
-            #calculat the numerical gradient
-            numgrad[p] = (loss2 - loss1) / (2*delta)
-            #reset the perturbation
+            # calculat the numerical gradient
+            numgrad[p] = (loss2 - loss1) / (2 * delta)
+            # reset the perturbation
             self.unflatten_thetas(origthetas)
             perturb[p] = 0
-            
-## OLD
-# loop over layers, neurons
+
+        ## OLD
+        # loop over layers, neurons
         idx = 0
-        if 0: 
+        if 0:
             for lv in self.layers:
                 theta_orig = deepcopy(lv.theta)
 
-# perturb each neuron and calc. grad at that neuron
-                for pi in range(theta_orig.size): #strip bias
+                # perturb each neuron and calc. grad at that neuron
+                for pi in range(theta_orig.size):  # strip bias
                     perturb = np.zeros(theta_orig.size)
                     perturb[pi] = delta
                     perturb = perturb.reshape(theta_orig.shape)
@@ -916,125 +979,128 @@ class NeuralNetwork(BaseEstimator):
                     loss1 = self.costFunctionU(X, y)
                     lv.theta = theta_orig - perturb
                     loss2 = self.costFunctionU(X, y)
-                    numgrad[idx] = (loss2 - loss1) / (2*delta)
+                    numgrad[idx] = (loss2 - loss1) / (2 * delta)
                     idx += 1
                 lv.theta = theta_orig
 
         return numgrad
 
-    def pickle_me(self, filename=''):
+    def pickle_me(self, filename=""):
         """
         dump the important parts of the classifier to a pickled file.
         (the theta's and gamma=learning rate)
         We name the file based on number of layers,
         and shape of layers
-        
+
         args:
         filename : base filename, append layer info to this
 
         """
         for li, lv in enumerate(self.layers):
             if filename:
-                filename += '_l%sx%s' % lv.theta.shape
+                filename += "_l%sx%s" % lv.theta.shape
             else:
-                filename += 'l%sx%s' % lv.theta.shape
-        filename += '.pkl'
-#create our pickle
+                filename += "l%sx%s" % lv.theta.shape
+        filename += ".pkl"
+        # create our pickle
         d = {}
-        d['nlayers'] = len(self.layers)
+        d["nlayers"] = len(self.layers)
         for li, lv in enumerate(self.layers):
             d[li] = lv.theta
-        d['gamma'] = self.gamma
+        d["gamma"] = self.gamma
 
-        print "pickling classifier to %s" % filename
-        cPickle.dump(d, open(filename, 'w'))
-        
-    def write_thetas(self, basename='layer_'):
+        print("pickling classifier to %s" % filename)
+        cPickle.dump(d, open(filename, "w"))
+
+    def write_thetas(self, basename="layer_"):
         """
         Write the theta's to a file in form
         basename_%s.npy % layer_number
 
         args
         basename : the base filename to write the data to
-       
+
         """
-        
+
         for li, lv in enumerate(self.layers):
             theta = lv.theta
             name = "%s_%s.npy" % (basename, li)
-            print "Saving layer %s to %s " % (li, name)
+            print("Saving layer %s to %s " % (li, name))
             np.save(name, theta)
 
-    def plot_firstlayer(self, imgdim=None,Nsamples=None):
+    def plot_firstlayer(self, imgdim=None, Nsamples=None):
         """
         plot the first layer of neurons
-        
+
         Args:
         imgdim = array [n, m]  of input image dimensions
         Nsamples: randomly choose Nsamples-by-Nsamples of neurons
-                 and plot them. 
+                 and plot them.
                 default = None = plot all neurons in first layer
 
         """
-        theta = self.layers[0].theta[1:,:] #strip off bias
+        theta = self.layers[0].theta[1:, :]  # strip off bias
         nimg, nneurons = theta.shape
 
         if imgdim == None:
             nx = int(np.sqrt(nimg))
             ny = nx
-            if nx*ny < nimg:
+            if nx * ny < nimg:
                 nx += 1
         else:
             nx, ny = imgdim
 
-        if nx*ny != nimg:
-            #Assume this is a 1-d thingy
-#            print "image dimensions (%s,%s) don't match actual %s" % (nx,ny,nimg)
+        if nx * ny != nimg:
+            # Assume this is a 1-d thingy
+            #            print("image dimensions (%s,%s) don't match actual %s" % (nx,ny,nimg))
             nx = nimg
             ny = 1
-#           return
+        #           return
 
         if Nsamples == None:
-#plot all of them
+            # plot all of them
             Nsamples = int(np.sqrt(nneurons))
-            if Nsamples*Nsamples < nneurons:
+            if Nsamples * Nsamples < nneurons:
                 Nsamples += 1
             samples = theta
-            print "showing all neurons"
+            print("showing all neurons")
         else:
-            if nneurons < Nsamples*Nsamples:
-            #not enough neurons to fill this matrix completely, so use them all
+            if nneurons < Nsamples * Nsamples:
+                # not enough neurons to fill this matrix completely, so use them all
                 Nsamples = int(np.sqrt(nneurons))
-                if Nsamples*Nsamples < nneurons:
+                if Nsamples * Nsamples < nneurons:
                     Nsamples += 1
                 samples = theta
             else:
-            #randomly choose a subset
+                # randomly choose a subset
                 n = np.random.uniform(0, nneurons, Nsamples**2).astype(np.int)
-                samples = theta[:,n]
-        
-#add buffer between neurons:
+                samples = theta[:, n]
+
+        # add buffer between neurons:
         if ny != 1:
             buf = 3
-            data = np.zeros((Nsamples*(nx+buf), Nsamples*(ny+buf)))
+            data = np.zeros((Nsamples * (nx + buf), Nsamples * (ny + buf)))
             for xi, xv in enumerate(samples.transpose()):
                 col = xi % Nsamples
                 row = xi // Nsamples
-    #            print xi,data.shape,row,col,xv.shape
-                data[row*(nx+buf):(row+1)*nx+row*buf, col*(ny+buf):(col+1)*ny+col*buf] = xv.reshape(nx,ny)
+                #            print(xi,data.shape,row,col,xv.shape)
+                data[
+                    row * (nx + buf) : (row + 1) * nx + row * buf,
+                    col * (ny + buf) : (col + 1) * ny + col * buf,
+                ] = xv.reshape(nx, ny)
 
             plt.imshow(data, cmap=plt.cm.gray)
         else:
             for xi, xv in enumerate(samples.transpose()):
-                plt.plot(xv.reshape(nx,ny))
-        plt.title('First layer of Neural Network')
+                plt.plot(xv.reshape(nx, ny))
+        plt.title("First layer of Neural Network")
         plt.show()
-        
+
+
 ############# end class NeuralNetwork ***************
 
 
-def checkGradients(nin=3, nout=3, ninternal=np.array([5]),
-                   Nsamples=5, gamma=0.):
+def checkGradients(nin=3, nout=3, ninternal=np.array([5]), Nsamples=5, gamma=0.0):
     """
     Create a small neural network to check
     backpropagatoin gradients
@@ -1044,48 +1110,50 @@ def checkGradients(nin=3, nout=3, ninternal=np.array([5]),
 
     returns
     numerical_gradient, gradient
-    
+
     """
-    print "Creating small NN to compare numerical approx to gradient"
-    print "with actual gradient. Arrays should be identical"
+    print("Creating small NN to compare numerical approx to gradient")
+    print("with actual gradient. Arrays should be identical")
 
-#create the neural network and some fake data
+    # create the neural network and some fake data
     X = np.random.random((Nsamples, nin))
-#labels from 0 <= y < nlabels = nout
-    y =  np.array(np.random.uniform(0, nout, Nsamples), dtype=int)
+    # labels from 0 <= y < nlabels = nout
+    y = np.array(np.random.uniform(0, nout, Nsamples), dtype=int)
 
-# neural network, delta=0 and thetas=[] --> theta is randomly inited.
+    # neural network, delta=0 and thetas=[] --> theta is randomly inited.
     nn = create_NN(nin, nout, ninternal=ninternal, thetas=np.array([]), delta=0)
 
     numgrad = nn.numericalGradients(X, y)
     grad = nn.gradientU(X, y, gamma)
     return numgrad, grad
-        
+
+
 class handwritingpix(object):
     """
-    read in the machine learning data files, which we 
+    read in the machine learning data files, which we
     use to test our python implementation of the neural network
 
-    we assume they are 20x20 pixels 
+    we assume they are 20x20 pixels
     initializes with a filename, assumes matlab format
     though can have text=True for text format
     then requires the trained values 'y'
     """
+
     def __init__(self, samples, thetas):
 
         self.fname = samples
 
         data = io.loadmat(samples)
-        self.data = data['X']
-        self.y = data['y']
-# make sure the labels are in range 0<=y<nclass 
-# so we can easily index our row vector
+        self.data = data["X"]
+        self.y = data["y"]
+        # make sure the labels are in range 0<=y<nclass
+        # so we can easily index our row vector
         self.y = self.y - self.y.min()
         thetas = io.loadmat(thetas)
-        self.theta1 = thetas['Theta1'].transpose()
-        self.theta2 = thetas['Theta2'].transpose()
+        self.theta1 = thetas["Theta1"].transpose()
+        self.theta2 = thetas["Theta2"].transpose()
 
-#assume square image
+        # assume square image
         self.N = self.data.shape[1]
         self.Nsamples = self.data.shape[0]
         self.nx = np.sqrt(self.N)
@@ -1102,52 +1170,48 @@ class handwritingpix(object):
 
         n = np.random.uniform(0, self.Nsamples, Nsamples**2).astype(np.int)
         samples = self.data[n, :]
-        
-        data = np.zeros((Nsamples*ny, Nsamples*nx))
-        print n
+
+        data = np.zeros((Nsamples * ny, Nsamples * nx))
+        print(n)
         for xi, xv in enumerate(samples):
             col = xi % Nsamples
             row = xi // Nsamples
-#            print xi,data.shape,row,col,xv.shape
-            data[row*ny:(row+1)*ny, col*nx:(col+1)*nx] = xv.reshape(20, 20)
-            
+            #            print(xi,data.shape,row,col,xv.shape)
+            data[row * ny : (row + 1) * ny, col * nx : (col + 1) * nx] = xv.reshape(
+                20, 20
+            )
+
         plt.imshow(data, cmap=plt.cm.gray)
         plt.show()
-        
 
 
 #### Utility Functions ####
-def feature_curve(feature,
-                  originaldata,
-                  bounds=None,
-                  Npts=10,
-                  plot=False,
-                  pct=0.4):
+def feature_curve(feature, originaldata, bounds=None, Npts=10, plot=False, pct=0.4):
     """
     returns the training and cross validation set errors
     for a range of sizes of a given feature.
     (good for diagnosing overfitting or underfitting/
     high bias or high variance)
-    
+
     Args:
     classifier:  classifier
-    feature : string, name of the given feature 
-    (e.g. phasebins, intervals) 
+    feature : string, name of the given feature
+    (e.g. phasebins, intervals)
     originaldata : the original data loaded from pickled file, have ['pfds']
     and ['target']
     bounds : the range of feature sizes to explore
     plot : whether or not to plot the scores
-    Npts : plot Npts points 
+    Npts : plot Npts points
     pct (0<pct<1) : split the data as "pct" training, 1-pct testing
                    only if Xval = None
                    default pct = 0.6
     plot : False/[True] optionally plot the learning curve
-    
+
     Note: if Xval == None, then we assume (X,y) is the entire set of data,
           and we split them up using split_data(data,target)
 
     returns three vectors of length(ntrials):
-    train_score: training error for the N=length(pct*X) 
+    train_score: training error for the N=length(pct*X)
     test_score: error on x-val data, when trainined on "i" samples
     ntrials
 
@@ -1157,46 +1221,48 @@ def feature_curve(feature,
     * a high error indicates lots of bias,
       that you are probably underfitting the problem
       (so add more neurons/layers, or lower regularization)
-     
+
     * for lots of trials, a high gap between training_error
       and test_error (x-val error) indicates lots of variance
       (you are over-fitting, so remove some neurons/layers,
        or increase the regularization parameter)
     """
-    pfds = originaldata['pfds']
-    target = originaldata['target']
-    classdict = {0:[4,5], 1:[6,7]}
+    pfds = originaldata["pfds"]
+    target = originaldata["target"]
+    classdict = {0: [4, 5], 1: [6, 7]}
     for k, v in classdict.iteritems():
         for val in v:
             target[target == val] = k
 
     if bounds == None:
-        vals = mgrid[8:32:1j*Npts]
+        vals = mgrid[8 : 32 : 1j * Npts]
     else:
-        vals = mgrid[bounds[0]:bounds[1]:1j*Npts]
+        vals = mgrid[bounds[0] : bounds[1] : 1j * Npts]
 
-    kws = {'phasebins':0}
+    kws = {"phasebins": 0}
     train_score = np.zeros_like(vals)
     test_score = np.zeros_like(vals)
     for i, val in enumerate(vals):
         kws[feature] = int(val)
         data = [pf.getdata(**kws) for pf in pfds]
-        train_data, train_target, test_data, test_target = split_data(data,target, pct=pct)
-        classifier = create_NN(train_data,train_target,
-                               ninternal=[9],
-                               gamma=0.00025)
-        print "\nfeature idx, size, data_shape: %s, %s, %s" %\
-            (i, int(val),train_data.shape)
+        train_data, train_target, test_data, test_target = split_data(
+            data, target, pct=pct
+        )
+        classifier = create_NN(train_data, train_target, ninternal=[9], gamma=0.00025)
+        print(
+            "\nfeature idx, size, data_shape: %s, %s, %s"
+            % (i, int(val), train_data.shape)
+        )
 
-        classifier.fit(train_data,train_target,maxiter=2222,raninit=True)
-#record erro
-        train_score[i] = 1-classifier.score(train_data, train_target)
-        test_score[i] = 1-classifier.score(test_data, test_target)
+        classifier.fit(train_data, train_target, maxiter=2222, raninit=True)
+        # record erro
+        train_score[i] = 1 - classifier.score(train_data, train_target)
+        test_score[i] = 1 - classifier.score(test_data, test_target)
     if plot:
-        plt.plot(vals, train_score, 'r+', label='training')
-        plt.plot(vals, test_score, 'bx', label='x-val')
+        plt.plot(vals, train_score, "r+", label="training")
+        plt.plot(vals, test_score, "bx", label="x-val")
         plt.xlabel(feature)
-        plt.ylabel('error')
+        plt.ylabel("error")
         plt.legend()
         plt.show()
     return train_score, test_score, vals, vals[test_score.argmax()]
@@ -1209,7 +1275,7 @@ def labels2vectors(y, Nclass=1):
     projecting each sample 'y' into the appropriate row
 
     args:
-    y : [nsamples] 
+    y : [nsamples]
     Nclass: the number of classifications,
             defaults to number of unique items in y
 
@@ -1220,17 +1286,16 @@ def labels2vectors(y, Nclass=1):
     else:
         y = np.array([y], dtype=np.int)
 
-# number of samples
+    # number of samples
     N = y.size
 
-# determine number of classes
+    # determine number of classes
     if Nclass:
         nclass = Nclass
     else:
         nclass = len(np.unique(y))
 
-
-# map labels onto column vectors
+    # map labels onto column vectors
     if N == 1:
         yy = np.zeros(nclass, dtype=np.uint8)
     else:
@@ -1243,25 +1308,28 @@ def labels2vectors(y, Nclass=1):
             yy[yv, yi] = 1
     return yy
 
+
 def sigmoid(z):
     """
     compute element-wise the sigmoid of input array
 
     """
-    return 1./(1.0 + np.exp(-z))
+    return 1.0 / (1.0 + np.exp(-z))
+
 
 def sigmoidGradient(z):
     """
     compute element-wise the sigmoid-Gradient of input array
 
     """
-    return sigmoid(z) * (1-sigmoid(z))
-        
+    return sigmoid(z) * (1 - sigmoid(z))
+
+
 def split_data(data, target, pct=0.6):
     """
     Given some complete set of data and their targets,
     split the indices into 'pct' training, '1-pct' cross-vals
-    
+
     Args:
     data = input data
     target = data classifications
@@ -1272,12 +1340,13 @@ def split_data(data, target, pct=0.6):
 
     """
     from random import shuffle
-    if isinstance(data,type([])):
+
+    if isinstance(data, type([])):
         data = np.array(data)
 
     L = len(target)
     index = range(L)
-    cut = int(pct*L)
+    cut = int(pct * L)
     while 1:
         shuffle(index)
         training_idx = index[:cut]
@@ -1287,14 +1356,13 @@ def split_data(data, target, pct=0.6):
         test_idx = index[cut:]
         test_target = target[test_idx]
         test_data = data[test_idx]
-        
-# make sure training has samples from all classes
+
+        # make sure training has samples from all classes
         if len(np.unique(training_target)) == len(np.unique(target)):
             break
 
     return training_data, training_target, test_data, test_target
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

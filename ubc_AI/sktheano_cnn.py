@@ -23,21 +23,23 @@ import theano.tensor as T
 from theano.tensor.signal import downsample
 from theano.tensor.nnet import conv
 import logging
+
 _logger = logging.getLogger("theano.gof.compilelock")
 _logger.setLevel(logging.WARN)
 logger = logging.getLogger(__name__)
 
-mode = theano.Mode(linker='cvm')
-#mode = 'DEBUG_MODE'
+mode = theano.Mode(linker="cvm")
+# mode = 'DEBUG_MODE'
+
 
 class CNN(object):
     """
-    Conformal Neural Network, 
+    Conformal Neural Network,
     backend by Theano, but compliant with sklearn interface.
 
     This class holds the actual layers, while MetaCNN does
     the fit/predict routines. You should init with MetaCNN.
-    
+
     There are three layers:
     layer0 : a convolutional filter making filters[0] shifted copies,
              then downsampled by max pooling in grids of poolsize[0]
@@ -52,26 +54,34 @@ class CNN(object):
              --> (N, nkerns[1], nx3, ny3) (nx3 = nx2/poolsize[1][0], ny3=ny2/poolsize[1][1])
     layer2 : hidden layer of nkerns[1]*nx3*ny3 input features and n_hidden hidden neurons
     layer3 : final LR layer with n_hidden neural inputs and n_out outputs/classes
-             
+
 
     """
-    def __init__(self, input, n_in=1, n_out=0, activation=T.tanh,
-                 nkerns=[20,50],
-                 filters=[15,9],
-                 poolsize=[(3,3),(2,2)],
-                 n_hidden=500,
-                 output_type='softmax', batch_size=25,
-                 use_symbolic_softmax=False):
+
+    def __init__(
+        self,
+        input,
+        n_in=1,
+        n_out=0,
+        activation=T.tanh,
+        nkerns=[20, 50],
+        filters=[15, 9],
+        poolsize=[(3, 3), (2, 2)],
+        n_hidden=500,
+        output_type="softmax",
+        batch_size=25,
+        use_symbolic_softmax=False,
+    ):
 
         """
         n_in : width (or length) of input image (assumed square)
         n_out : number of class labels
-        
+
         :type nkerns: list of ints
         :param nkerns: number of kernels on each layer
-        
+
         :type filters: list of ints, or 2-tuples
-        :param filters: width of convolution. 
+        :param filters: width of convolution.
                         if 2-tuples, filter size can be different in x and y direction
 
         :type poolsize: list of 2-tuples
@@ -80,23 +90,25 @@ class CNN(object):
 
         :type n_hidden: int
         :param n_hidden: number of hidden neurons
-        
+
         :type output_type: string
         :param output_type: type of decision 'softmax', 'binary', 'real'
-        
+
         :type batch_size: int
         :param batch_size: number of samples in each training batch. Default 200.
-        """    
+        """
         self.activation = activation
         self.output_type = output_type
 
-        #shape of input images
+        # shape of input images
         nx, ny = n_in, n_in
 
         if use_symbolic_softmax:
+
             def symbolic_softmax(x):
                 e = T.exp(x)
-                return e / T.sum(e, axis=1).dimshuffle(0, 'x')
+                return e / T.sum(e, axis=1).dimshuffle(0, "x")
+
             self.softmax = symbolic_softmax
         else:
             self.softmax = T.nnet.softmax
@@ -107,7 +119,7 @@ class CNN(object):
 
         # Construct the first convolutional pooling layer:
         # filtering reduces the image size to (nx-filx+1,ny-fily+1)
-        # maxpooling reduces this further to (nx/poosize[0][0],ny/poolsize[0][1]) 
+        # maxpooling reduces this further to (nx/poosize[0][0],ny/poolsize[0][1])
         # 4D output tensor is thus of shape (batch_size,nkerns[0],xx,yy)
         nim = filters[0]
         if isinstance(nim, int):
@@ -117,16 +129,19 @@ class CNN(object):
             fil1x = nim[0]
             fil1y = nim[1]
         rng = np.random.RandomState(23455)
-        self.layer0 = LeNetConvPoolLayer(rng, input=layer0_input,
-                                  image_shape=(batch_size, 1, nx, ny),
-                                  filter_shape=(nkerns[0], 1, fil1x, fil1y),
-                                         poolsize=poolsize[0])
+        self.layer0 = LeNetConvPoolLayer(
+            rng,
+            input=layer0_input,
+            image_shape=(batch_size, 1, nx, ny),
+            filter_shape=(nkerns[0], 1, fil1x, fil1y),
+            poolsize=poolsize[0],
+        )
         # Construct the second convolutional pooling layer
         # filtering reduces the image size to (nbin-nim+1,nbin-nim+1) = x
         # maxpooling reduces this further to (x/2,x/2) = y
         # 4D output tensor is thus of shape (nkerns[0],nkerns[1],y,y)
-        poox = (nx - fil1x + 1)/poolsize[0][0]
-        pooy = (ny - fil1y + 1)/poolsize[0][1]
+        poox = (nx - fil1x + 1) / poolsize[0][0]
+        pooy = (ny - fil1y + 1) / poolsize[0][1]
         nconf = filters[1]
         if isinstance(nconf, int):
             fil2x = nconf
@@ -134,43 +149,55 @@ class CNN(object):
         else:
             fil2x = nconf[0]
             fil2y = nconf[1]
-        self.layer1 = LeNetConvPoolLayer(rng, input=self.layer0.output,
-                image_shape=(batch_size, nkerns[0], poox, pooy),
-                filter_shape=(nkerns[1], nkerns[0], fil2x, fil2y),
-                                         poolsize=poolsize[1])
+        self.layer1 = LeNetConvPoolLayer(
+            rng,
+            input=self.layer0.output,
+            image_shape=(batch_size, nkerns[0], poox, pooy),
+            filter_shape=(nkerns[1], nkerns[0], fil2x, fil2y),
+            poolsize=poolsize[1],
+        )
 
         # the TanhLayer being fully-connected, it operates on 2D matrices of
         # shape (batch_size,num_pixels) (i.e matrix of rasterized images).
         # This will generate a matrix of shape (20,32*4*4) = (20,512)
         layer2_input = self.layer1.output.flatten(2)
 
-       # construct a fully-connected sigmoidal layer
-        poo2x = (poox - fil2x + 1)/poolsize[1][0]
-        poo2y = (pooy - fil2y + 1)/poolsize[1][1]
-        self.layer2 = HiddenLayer(rng, input=layer2_input,
-                                  n_in=nkerns[1]*poo2x*poo2y,
-                                  n_out=n_hidden, activation=T.tanh)
+        # construct a fully-connected sigmoidal layer
+        poo2x = (poox - fil2x + 1) / poolsize[1][0]
+        poo2y = (pooy - fil2y + 1) / poolsize[1][1]
+        self.layer2 = HiddenLayer(
+            rng,
+            input=layer2_input,
+            n_in=nkerns[1] * poo2x * poo2y,
+            n_out=n_hidden,
+            activation=T.tanh,
+        )
 
         # classify the values of the fully-connected sigmoidal layer
-        self.layer3 = LogisticRegression(input=self.layer2.output,
-                                         n_in=n_hidden, n_out=n_out)
+        self.layer3 = LogisticRegression(
+            input=self.layer2.output, n_in=n_hidden, n_out=n_out
+        )
 
         # CNN regularization
         self.L1 = self.layer3.L1
         self.L2_sqr = self.layer3.L2_sqr
-        
+
         # create a list of all model parameters to be fit by gradient descent
-        self.params = self.layer3.params + self.layer2.params\
-            + self.layer1.params + self.layer0.params
+        self.params = (
+            self.layer3.params
+            + self.layer2.params
+            + self.layer1.params
+            + self.layer0.params
+        )
 
         self.y_pred = self.layer3.y_pred
         self.p_y_given_x = self.layer3.p_y_given_x
 
-        if self.output_type == 'real':
+        if self.output_type == "real":
             self.loss = lambda y: self.mse(y)
-        elif self.output_type == 'binary':
+        elif self.output_type == "binary":
             self.loss = lambda y: self.nll_binary(y)
-        elif self.output_type == 'softmax':
+        elif self.output_type == "softmax":
             # push through softmax, computing vector of class-membership
             # probabilities in symbolic form
             self.loss = lambda y: self.nll_multiclass(y)
@@ -185,7 +212,7 @@ class CNN(object):
         # negative log likelihood based on binary cross entropy error
         return T.mean(T.nnet.binary_crossentropy(self.p_y_given_x, y))
 
-    #same as negative-log-likelikhood
+    # same as negative-log-likelikhood
     def nll_multiclass(self, y):
         # negative log likelihood based on multiclass cross entropy error
         # y.shape[0] is (symbolically) the number of rows in y, i.e.,
@@ -211,12 +238,14 @@ class CNN(object):
         """
         # check if y has same dimension of y_pred
         if y.ndim != self.y_out.ndim:
-            raise TypeError('y should have the same shape as self.y_out',
-                ('y', y.type, 'y_pred', self.y_pred.type))
+            raise TypeError(
+                "y should have the same shape as self.y_out",
+                ("y", y.type, "y_pred", self.y_pred.type),
+            )
 
-        if self.output_type in ('binary', 'softmax'):
+        if self.output_type in ("binary", "softmax"):
             # check if y is of the correct datatype
-            if y.dtype.startswith('int'):
+            if y.dtype.startswith("int"):
                 # the T.neq operator returns a vector of 0s and 1s, where 1
                 # represents a mistake in prediction
                 return T.mean(T.neq(self.y_pred, y))
@@ -231,18 +260,26 @@ class MetaCNN(BaseEstimator):
     the number of outputs in .fit from the training data
 
     """
-    def __init__(self, learning_rate=0.05,
-                 n_epochs=60, batch_size=25, activation='tanh', 
-                 nkerns=[20,45],
-                 n_hidden=500,
-                 filters=[15,7],
-                 poolsize=[(3,3),(2,2)],
-                 output_type='softmax',
-                 L1_reg=0.00, L2_reg=0.00,
-                 use_symbolic_softmax=False,
-                 ### Note, n_in and n_out are actually set in 
-                 ### .fit, they are here to help cPickle
-                 n_in=50, n_out=2):
+
+    def __init__(
+        self,
+        learning_rate=0.05,
+        n_epochs=60,
+        batch_size=25,
+        activation="tanh",
+        nkerns=[20, 45],
+        n_hidden=500,
+        filters=[15, 7],
+        poolsize=[(3, 3), (2, 2)],
+        output_type="softmax",
+        L1_reg=0.00,
+        L2_reg=0.00,
+        use_symbolic_softmax=False,
+        ### Note, n_in and n_out are actually set in
+        ### .fit, they are here to help cPickle
+        n_in=50,
+        n_out=2,
+    ):
         self.learning_rate = float(learning_rate)
         self.nkerns = nkerns
         self.n_hidden = n_hidden
@@ -264,41 +301,44 @@ class MetaCNN(BaseEstimator):
         image size (assumed square) and output labels from the training data.
 
         """
-        #input
-        self.x = T.matrix('x')
-        #output (a label)
-        self.y = T.ivector('y')
-        
-        if self.activation == 'tanh':
+        # input
+        self.x = T.matrix("x")
+        # output (a label)
+        self.y = T.ivector("y")
+
+        if self.activation == "tanh":
             activation = T.tanh
-        elif self.activation == 'sigmoid':
+        elif self.activation == "sigmoid":
             activation = T.nnet.sigmoid
-        elif self.activation == 'relu':
+        elif self.activation == "relu":
             activation = lambda x: x * (x > 0)
-        elif self.activation == 'cappedrelu':
+        elif self.activation == "cappedrelu":
             activation = lambda x: T.minimum(x * (x > 0), 6)
         else:
             raise NotImplementedError
-        
-        self.cnn = CNN(input=self.x, n_in=self.n_in, 
-                       n_out=self.n_out, activation=activation, 
-                       nkerns=self.nkerns,
-                       filters=self.filters,
-                       n_hidden=self.n_hidden,
-                       poolsize=self.poolsize,
-                       output_type=self.output_type,
-                       batch_size=self.batch_size,
-                       use_symbolic_softmax=self.use_symbolic_softmax)
-        
-        #self.cnn.predict expects batch_size number of inputs. 
-        #we wrap those functions and pad as necessary in 'def predict' and 'def predict_proba'
-        self.predict_wrap = theano.function(inputs=[self.x],
-                                            outputs=self.cnn.y_pred,
-                                            mode=mode)
-        self.predict_proba_wrap = theano.function(inputs=[self.x],
-                                                  outputs=self.cnn.p_y_given_x,
-                                                  mode=mode)
 
+        self.cnn = CNN(
+            input=self.x,
+            n_in=self.n_in,
+            n_out=self.n_out,
+            activation=activation,
+            nkerns=self.nkerns,
+            filters=self.filters,
+            n_hidden=self.n_hidden,
+            poolsize=self.poolsize,
+            output_type=self.output_type,
+            batch_size=self.batch_size,
+            use_symbolic_softmax=self.use_symbolic_softmax,
+        )
+
+        # self.cnn.predict expects batch_size number of inputs.
+        # we wrap those functions and pad as necessary in 'def predict' and 'def predict_proba'
+        self.predict_wrap = theano.function(
+            inputs=[self.x], outputs=self.cnn.y_pred, mode=mode
+        )
+        self.predict_proba_wrap = theano.function(
+            inputs=[self.x], outputs=self.cnn.p_y_given_x, mode=mode
+        )
 
     def score(self, X, y):
         """Returns the mean accuracy on the given test data and labels.
@@ -318,10 +358,16 @@ class MetaCNN(BaseEstimator):
         """
         return np.mean(self.predict(X) == y)
 
-
-    def fit(self, X_train, Y_train, X_test=None, Y_test=None,
-            validation_frequency=2, n_epochs=None):
-        """ Fit model
+    def fit(
+        self,
+        X_train,
+        Y_train,
+        X_test=None,
+        Y_test=None,
+        validation_frequency=2,
+        n_epochs=None,
+    ):
+        """Fit model
 
         Pass in X_test, Y_test to compute test error and report during
         training.
@@ -333,13 +379,13 @@ class MetaCNN(BaseEstimator):
             in terms of number of sequences (or number of weight updates)
         n_epochs : None (used to override self.n_epochs from init.
         """
-        #prepare the CNN 
+        # prepare the CNN
         self.n_in = int(np.sqrt(X_train.shape[1]))
         self.n_out = len(np.unique(Y_train))
         self.ready()
 
         if X_test is not None:
-            assert(Y_test is not None)
+            assert Y_test is not None
             interactive = True
             test_set_x, test_set_y = self.shared_dataset((X_test, Y_test))
         else:
@@ -357,35 +403,55 @@ class MetaCNN(BaseEstimator):
         ######################
         # BUILD ACTUAL MODEL #
         ######################
-        logger.info('... building the model')
+        logger.info("... building the model")
 
-        index = T.lscalar('index')    # index to a [mini]batch
+        index = T.lscalar("index")  # index to a [mini]batch
 
-        cost = self.cnn.loss(self.y)\
-            + self.L1_reg * self.cnn.L1\
+        cost = (
+            self.cnn.loss(self.y)
+            + self.L1_reg * self.cnn.L1
             + self.L2_reg * self.cnn.L2_sqr
+        )
 
-        compute_train_error = theano.function(inputs=[index, ],
-                                              outputs=self.cnn.loss(self.y),
-                                              givens={
-                self.x: train_set_x[index * self.batch_size: (index + 1) * self.batch_size],
-                self.y: train_set_y[index * self.batch_size: (index + 1) * self.batch_size]},
-                                              mode=mode)
+        compute_train_error = theano.function(
+            inputs=[
+                index,
+            ],
+            outputs=self.cnn.loss(self.y),
+            givens={
+                self.x: train_set_x[
+                    index * self.batch_size : (index + 1) * self.batch_size
+                ],
+                self.y: train_set_y[
+                    index * self.batch_size : (index + 1) * self.batch_size
+                ],
+            },
+            mode=mode,
+        )
 
         if interactive:
-            compute_test_error = theano.function(inputs=[index, ],
-                                                 outputs=self.cnn.loss(self.y),
-                                                 givens={
-                self.x: test_set_x[index * self.batch_size: (index + 1) * self.batch_size],
-                self.y: test_set_y[index * self.batch_size: (index + 1) * self.batch_size]},
-                                                 mode=mode)
+            compute_test_error = theano.function(
+                inputs=[
+                    index,
+                ],
+                outputs=self.cnn.loss(self.y),
+                givens={
+                    self.x: test_set_x[
+                        index * self.batch_size : (index + 1) * self.batch_size
+                    ],
+                    self.y: test_set_y[
+                        index * self.batch_size : (index + 1) * self.batch_size
+                    ],
+                },
+                mode=mode,
+            )
 
         # create a list of all model parameters to be fit by gradient descent
         self.params = self.cnn.params
 
         # create a list of gradients for all model parameters
         self.grads = T.grad(cost, self.params)
-        
+
         # train_model is a function that updates the model parameters by
         # SGD Since this model has many parameters, it would be tedious to
         # manually create an update rule for each model parameter. We thus
@@ -395,32 +461,40 @@ class MetaCNN(BaseEstimator):
         for param_i, grad_i in zip(self.params, self.grads):
             self.updates[param_i] = param_i - self.learning_rate * grad_i
 
-        train_model = theano.function([index], cost, updates=self.updates,
-                                      givens={
-                self.x: train_set_x[index * self.batch_size: (index + 1) * self.batch_size],
-                self.y: train_set_y[index * self.batch_size: (index + 1) * self.batch_size]}
-                                      )
+        train_model = theano.function(
+            [index],
+            cost,
+            updates=self.updates,
+            givens={
+                self.x: train_set_x[
+                    index * self.batch_size : (index + 1) * self.batch_size
+                ],
+                self.y: train_set_y[
+                    index * self.batch_size : (index + 1) * self.batch_size
+                ],
+            },
+        )
 
         ###############
         # TRAIN MODEL #
         ###############
-        logger.info('... training')
-        
+        logger.info("... training")
+
         # early-stopping parameters
         patience = 1000  # look as this many examples regardless
         patience_increase = 2  # wait this much longer when a new best is
-                               # found
+        # found
         improvement_threshold = 0.995  # a relative improvement of this much is
-                                       # considered significant
+        # considered significant
         validation_frequency = min(n_train_batches, patience / 2)
-                                  # go through this many
-                                  # minibatche before checking the network
-                                  # on the validation set; in this case we
-                                  # check every epoch
+        # go through this many
+        # minibatche before checking the network
+        # on the validation set; in this case we
+        # check every epoch
         best_test_loss = np.inf
         best_iter = 0
         epoch = 0
-        done_looping = False 
+        done_looping = False
 
         if n_epochs is None:
             n_epochs = self.n_epochs
@@ -432,45 +506,62 @@ class MetaCNN(BaseEstimator):
                 iter = epoch * n_train_batches + idx
 
                 cost_ij = train_model(idx)
-                
+
                 if iter % validation_frequency == 0:
                     # compute loss on training set
-                    train_losses = [compute_train_error(i)
-                                    for i in xrange(n_train_batches)]
+                    train_losses = [
+                        compute_train_error(i) for i in xrange(n_train_batches)
+                    ]
                     this_train_loss = np.mean(train_losses)
 
                     if interactive:
-                        test_losses = [compute_test_error(i)
-                                        for i in xrange(n_test_batches)]
+                        test_losses = [
+                            compute_test_error(i) for i in xrange(n_test_batches)
+                        ]
                         this_test_loss = np.mean(test_losses)
-                        note = 'epoch %i, seq %i/%i, tr loss %f '\
-                            'te loss %f lr: %f' % \
-                            (epoch, idx + 1, n_train_batches,
-                             this_train_loss, this_test_loss, self.learning_rate)
+                        note = (
+                            "epoch %i, seq %i/%i, tr loss %f "
+                            "te loss %f lr: %f"
+                            % (
+                                epoch,
+                                idx + 1,
+                                n_train_batches,
+                                this_train_loss,
+                                this_test_loss,
+                                self.learning_rate,
+                            )
+                        )
                         logger.info(note)
-                        print note
+                        print(note)
 
                         if this_test_loss < best_test_loss:
-                            #improve patience if loss improvement is good enough
-                            if this_test_loss < best_test_loss *  \
-                                    improvement_threshold:
+                            # improve patience if loss improvement is good enough
+                            if this_test_loss < best_test_loss * improvement_threshold:
                                 patience = max(patience, iter * patience_increase)
 
                             # save best validation score and iteration number
                             best_test_loss = this_test_loss
                             best_iter = iter
                     else:
-                        logger.info('epoch %i, seq %i/%i, train loss %f '
-                                    'lr: %f' % \
-                                    (epoch, idx + 1, n_train_batches, this_train_loss,
-                                     self.learning_rate))
+                        logger.info(
+                            "epoch %i, seq %i/%i, train loss %f "
+                            "lr: %f"
+                            % (
+                                epoch,
+                                idx + 1,
+                                n_train_batches,
+                                this_train_loss,
+                                self.learning_rate,
+                            )
+                        )
                 if patience <= iter:
                     done_looping = True
                     break
         logger.info("Optimization complete")
-        logger.info("Best xval score of %f %% obtained at iteration %i" %
-                    (best_test_loss * 100., best_iter))
-
+        logger.info(
+            "Best xval score of %f %% obtained at iteration %i"
+            % (best_test_loss * 100.0, best_iter)
+        )
 
     def predict(self, data):
         """
@@ -485,20 +576,28 @@ class MetaCNN(BaseEstimator):
             data = np.array([data])
 
         nsamples = data.shape[0]
-        n_batches = nsamples//self.batch_size
-        n_rem = nsamples%self.batch_size
+        n_batches = nsamples // self.batch_size
+        n_rem = nsamples % self.batch_size
         if n_batches > 0:
-            preds = [list(self.predict_wrap(data[i*self.batch_size:(i+1)*self.batch_size]))\
-                                           for i in range(n_batches)]
+            preds = [
+                list(
+                    self.predict_wrap(
+                        data[i * self.batch_size : (i + 1) * self.batch_size]
+                    )
+                )
+                for i in range(n_batches)
+            ]
         else:
             preds = []
         if n_rem > 0:
             z = np.zeros((self.batch_size, self.n_in * self.n_in))
-            z[0:n_rem] = data[n_batches*self.batch_size:n_batches*self.batch_size+n_rem]
+            z[0:n_rem] = data[
+                n_batches * self.batch_size : n_batches * self.batch_size + n_rem
+            ]
             preds.append(self.predict_wrap(z)[0:n_rem])
-        
+
         return np.hstack(preds).flatten()
-    
+
     def predict_proba(self, data):
         """
         the CNN expects inputs with Nsamples = self.batch_size.
@@ -512,44 +611,49 @@ class MetaCNN(BaseEstimator):
             data = np.array([data])
 
         nsamples = data.shape[0]
-        n_batches = nsamples//self.batch_size
-        n_rem = nsamples%self.batch_size
+        n_batches = nsamples // self.batch_size
+        n_rem = nsamples % self.batch_size
         if n_batches > 0:
-            preds = [list(self.predict_proba_wrap(data[i*self.batch_size:(i+1)*self.batch_size]))\
-                                           for i in range(n_batches)]
+            preds = [
+                list(
+                    self.predict_proba_wrap(
+                        data[i * self.batch_size : (i + 1) * self.batch_size]
+                    )
+                )
+                for i in range(n_batches)
+            ]
         else:
             preds = []
         if n_rem > 0:
             z = np.zeros((self.batch_size, self.n_in * self.n_in))
-            z[0:n_rem] = data[n_batches*self.batch_size:n_batches*self.batch_size+n_rem]
+            z[0:n_rem] = data[
+                n_batches * self.batch_size : n_batches * self.batch_size + n_rem
+            ]
             preds.append(self.predict_proba_wrap(z)[0:n_rem])
-        
+
         return np.vstack(preds)
-        
 
     def shared_dataset(self, data_xy):
-        """ Load the dataset into shared variables """
+        """Load the dataset into shared variables"""
 
         data_x, data_y = data_xy
-        shared_x = theano.shared(np.asarray(data_x,
-                                            dtype=theano.config.floatX))
+        shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
 
-        shared_y = theano.shared(np.asarray(data_y,
-                                            dtype=theano.config.floatX))
+        shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
 
-        if self.output_type in ('binary', 'softmax'):
-            return shared_x, T.cast(shared_y, 'int32')
+        if self.output_type in ("binary", "softmax"):
+            return shared_x, T.cast(shared_y, "int32")
         else:
             return shared_x, shared_y
 
     def __getstate__(self):
-        """ Return state sequence."""
-        
-        #check if we're using ubc_AI.classifier wrapper, 
-        #adding it's params to the state
-        if hasattr(self, 'orig_class'):
+        """Return state sequence."""
+
+        # check if we're using ubc_AI.classifier wrapper,
+        # adding it's params to the state
+        if hasattr(self, "orig_class"):
             superparams = self.get_params()
-            #now switch to orig. class (MetaCNN)
+            # now switch to orig. class (MetaCNN)
             oc = self.orig_class
             cc = self.__class__
             self.__class__ = oc
@@ -558,8 +662,8 @@ class MetaCNN(BaseEstimator):
                 params[k] = v
             self.__class__ = cc
         else:
-            params = self.get_params()  #sklearn.BaseEstimator
-        if hasattr(self, 'cnn'):
+            params = self.get_params()  # sklearn.BaseEstimator
+        if hasattr(self, "cnn"):
             weights = [p.get_value() for p in self.cnn.params]
         else:
             weights = []
@@ -567,31 +671,31 @@ class MetaCNN(BaseEstimator):
         return state
 
     def _set_weights(self, weights):
-        """ Set fittable parameters from weights sequence.
+        """Set fittable parameters from weights sequence.
 
         Parameters must be in the order defined by self.params:
             W, W_in, W_out, h0, bh, by
         """
         i = iter(weights)
-        if hasattr(self, 'cnn'):
+        if hasattr(self, "cnn"):
             for param in self.cnn.params:
                 param.set_value(i.next())
 
     def __setstate__(self, state):
-        """ Set parameters from state sequence.
+        """Set parameters from state sequence.
 
         Parameters must be in the order defined by self.params:
             W, W_in, W_out, h0, bh, by
         """
         params, weights = state
-        #we may have several classes or superclasses
-        for k in ['n_comp', 'use_pca', 'feature']:
+        # we may have several classes or superclasses
+        for k in ["n_comp", "use_pca", "feature"]:
             if k in params:
-                self.set_params(**{k:params[k]})
+                self.set_params(**{k: params[k]})
                 params.pop(k)
 
-        #now switch to MetaCNN if necessary
-        if hasattr(self,'orig_class'):
+        # now switch to MetaCNN if necessary
+        if hasattr(self, "orig_class"):
             cc = self.__class__
             oc = self.orig_class
             self.__class__ = oc
@@ -604,35 +708,35 @@ class MetaCNN(BaseEstimator):
             self.set_params(**params)
             self.ready()
             self._set_weights(weights)
-            
 
-    def save(self, fpath='.', fname=None):
-        """ Save a pickled representation of Model state. """
+    def save(self, fpath=".", fname=None):
+        """Save a pickled representation of Model state."""
         import datetime
+
         fpathstart, fpathext = os.path.splitext(fpath)
-        if fpathext == '.pkl':
+        if fpathext == ".pkl":
             # User supplied an absolute path to a pickle file
             fpath, fname = os.path.split(fpath)
 
         elif fname is None:
             # Generate filename based on date
             date_obj = datetime.datetime.now()
-            date_str = date_obj.strftime('%Y-%m-%d-%H:%M:%S')
+            date_str = date_obj.strftime("%Y-%m-%d-%H:%M:%S")
             class_name = self.__class__.__name__
-            fname = '%s.%s.pkl' % (class_name, date_str)
+            fname = "%s.%s.pkl" % (class_name, date_str)
 
         fabspath = os.path.join(fpath, fname)
 
         logger.info("Saving to %s ..." % fabspath)
-        file = open(fabspath, 'wb')
+        file = open(fabspath, "wb")
         state = self.__getstate__()
         pickle.dump(state, file, protocol=pickle.HIGHEST_PROTOCOL)
         file.close()
 
     def load(self, path):
-        """ Load model parameters from path. """
+        """Load model parameters from path."""
         logger.info("Loading from %s ..." % path)
-        file = open(path, 'rb')
+        file = open(path, "rb")
         state = pickle.load(file)
         self.__setstate__(state)
         file.close()
@@ -648,7 +752,7 @@ class LogisticRegression(object):
     """
 
     def __init__(self, input, n_in, n_out):
-        """ Initialize the parameters of the logistic regression
+        """Initialize the parameters of the logistic regression
 
         :type input: theano.tensor.TensorType
         :param input: symbolic variable that describes the input of the
@@ -664,13 +768,15 @@ class LogisticRegression(object):
 
         """
         # initialize with 0 the weights W as a matrix of shape (n_in, n_out)
-        self.W = theano.shared(value=np.zeros((n_in, n_out),
-                                                 dtype=theano.config.floatX),
-                                name='W', borrow=True)
+        self.W = theano.shared(
+            value=np.zeros((n_in, n_out), dtype=theano.config.floatX),
+            name="W",
+            borrow=True,
+        )
         # initialize the baises b as a vector of n_out 0s
-        self.b = theano.shared(value=np.zeros((n_out,),
-                                                 dtype=theano.config.floatX),
-                               name='b', borrow=True)
+        self.b = theano.shared(
+            value=np.zeros((n_out,), dtype=theano.config.floatX), name="b", borrow=True
+        )
 
         # compute vector of class-membership probabilities in symbolic form
         self.p_y_given_x = T.nnet.softmax(T.dot(input, self.W) + self.b)
@@ -690,7 +796,7 @@ class LogisticRegression(object):
         # square of L2 norm ; one regularization option is to enforce
         # square of L2 norm to be small
         self.L2_sqr = 0
-        self.L2_sqr += (self.W ** 2).sum()
+        self.L2_sqr += (self.W**2).sum()
 
     def negative_log_likelihood(self, y):
         """Return the mean of the negative log-likelihood of the prediction
@@ -733,19 +839,21 @@ class LogisticRegression(object):
 
         # check if y has same dimension of y_pred
         if y.ndim != self.y_pred.ndim:
-            raise TypeError('y should have the same shape as self.y_pred',
-                ('y', target.type, 'y_pred', self.y_pred.type))
+            raise TypeError(
+                "y should have the same shape as self.y_pred",
+                ("y", target.type, "y_pred", self.y_pred.type),
+            )
         # check if y is of the correct datatype
-        if y.dtype.startswith('int'):
+        if y.dtype.startswith("int"):
             # the T.neq operator returns a vector of 0s and 1s, where 1
             # represents a mistake in prediction
             return T.mean(T.neq(self.y_pred, y))
         else:
             raise NotImplementedError()
 
+
 class HiddenLayer(object):
-    def __init__(self, rng, input, n_in, n_out, W=None, b=None,
-                 activation=T.tanh):
+    def __init__(self, rng, input, n_in, n_out, W=None, b=None, activation=T.tanh):
         """
         Typical hidden layer of a MLP: units are fully-connected and have
         sigmoidal activation function. Weight matrix W is of shape (n_in,n_out)
@@ -786,30 +894,34 @@ class HiddenLayer(object):
         #        We have no info for other function, so we use the same as
         #        tanh.
         if W is None:
-            W_values = np.asarray(rng.uniform(
-                    low=-np.sqrt(6. / (n_in + n_out)),
-                    high=np.sqrt(6. / (n_in + n_out)),
-                    size=(n_in, n_out)), dtype=theano.config.floatX)
+            W_values = np.asarray(
+                rng.uniform(
+                    low=-np.sqrt(6.0 / (n_in + n_out)),
+                    high=np.sqrt(6.0 / (n_in + n_out)),
+                    size=(n_in, n_out),
+                ),
+                dtype=theano.config.floatX,
+            )
             if activation == theano.tensor.nnet.sigmoid:
                 W_values *= 4
 
-            W = theano.shared(value=W_values, name='W', borrow=True)
+            W = theano.shared(value=W_values, name="W", borrow=True)
 
         if b is None:
             b_values = np.zeros((n_out,), dtype=theano.config.floatX)
-            b = theano.shared(value=b_values, name='b', borrow=True)
+            b = theano.shared(value=b_values, name="b", borrow=True)
 
         self.W = W
         self.b = b
 
         lin_output = T.dot(input, self.W) + self.b
-        self.output = (lin_output if activation is None
-                       else activation(lin_output))
+        self.output = lin_output if activation is None else activation(lin_output)
         # parameters of the model
         self.params = [self.W, self.b]
 
+
 class LeNetConvPoolLayer(object):
-    """Pool Layer of a convolutional network """
+    """Pool Layer of a convolutional network"""
 
     def __init__(self, rng, input, filter_shape, image_shape, poolsize=(2, 2)):
         """
@@ -843,33 +955,39 @@ class LeNetConvPoolLayer(object):
         # each unit in the lower layer receives a gradient from:
         # "num output feature maps * filter height * filter width" /
         #   pooling size
-        fan_out = (filter_shape[0] * np.prod(filter_shape[2:]) /
-                   np.prod(poolsize))
+        fan_out = filter_shape[0] * np.prod(filter_shape[2:]) / np.prod(poolsize)
         # initialize weights with random weights
-        W_bound = np.sqrt(6. / (fan_in + fan_out))
-        self.W = theano.shared(np.asarray(
-            rng.uniform(low=-W_bound, high=W_bound, size=filter_shape),
-            dtype=theano.config.floatX),
-                               borrow=True)
+        W_bound = np.sqrt(6.0 / (fan_in + fan_out))
+        self.W = theano.shared(
+            np.asarray(
+                rng.uniform(low=-W_bound, high=W_bound, size=filter_shape),
+                dtype=theano.config.floatX,
+            ),
+            borrow=True,
+        )
 
         # the bias is a 1D tensor -- one bias per output feature map
         b_values = np.zeros((filter_shape[0],), dtype=theano.config.floatX)
         self.b = theano.shared(value=b_values, borrow=True)
 
         # convolve input feature maps with filters
-        conv_out = conv.conv2d(input=input, filters=self.W,
-                filter_shape=filter_shape, image_shape=image_shape)
+        conv_out = conv.conv2d(
+            input=input,
+            filters=self.W,
+            filter_shape=filter_shape,
+            image_shape=image_shape,
+        )
 
         # downsample each feature map individually, using maxpooling
-        pooled_out = downsample.max_pool_2d(input=conv_out,
-                                            ds=poolsize, ignore_border=True)
+        pooled_out = downsample.max_pool_2d(
+            input=conv_out, ds=poolsize, ignore_border=True
+        )
 
         # add the bias term. Since the bias is a vector (1D array), we first
         # reshape it to a tensor of shape (1,n_filters,1,1). Each bias will
         # thus be broadcasted across mini-batches and feature map
         # width & height
-        self.output = T.tanh(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
+        self.output = T.tanh(pooled_out + self.b.dimshuffle("x", 0, "x", "x"))
 
         # store parameters of this layer
         self.params = [self.W, self.b]
-
