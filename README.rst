@@ -1,3 +1,8 @@
+========
+ubc_AI
+========
+
+
 UBC AI project (pfd AI part)
 by Aaron Berndsen and Weiwei Zhu
 
@@ -49,3 +54,4 @@ text = '\n'.join(['%s %s' % (pfdfile[i], AI_scores[i]) for i in range(len(pfdfil
 fout = open('clfresult.txt', 'w')
 fout.write(text)
 fout.close()
+
