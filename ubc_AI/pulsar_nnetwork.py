@@ -7,7 +7,7 @@ optimizations for large data sets
 
 """
 import numpy as np
-import cPickle
+import pickle
 import pylab as plt
 from scipy import io
 from scipy import mgrid
@@ -51,7 +51,7 @@ def load_pickle(fname):
     determined by the 'thetas' in the pickle
 
     """
-    d = cPickle.load(open(fname, "r"))
+    d = pickle.load(open(fname, "r"))
     nlayers = d["nlayers"]
     gamma = d["gamma"]
     thetas = []
@@ -135,7 +135,7 @@ class NeuralNetwork(BaseEstimator):
                  shiftlayer in [0, 1, 2, ...] number of hidden layers
 
     Notes:
-    * if design != None and thetas != None, we get shape
+    * if design and thetas, we get shape
       from the thetas
 
     * if design = thetas = None, we determine design in fit routine
@@ -162,7 +162,7 @@ class NeuralNetwork(BaseEstimator):
         else:
             self.maxiter = maxiter
         self.shiftlayer = shiftlayer
-        if thetas != None:
+        if thetas:
             nfeatures = thetas[0].shape[0] - 1
             ntargets = thetas[1].shape[1]
             self.create_layers(
@@ -205,26 +205,26 @@ class NeuralNetwork(BaseEstimator):
 
         """
         if design == None:
-            if self.design != None:
+            if self.design:
                 design = self.design
             else:
                 design = [16]
         if isinstance(design, type(int())):
             design = [design]
 
-        if thetas != None:
+        if thetas:
             design = []
             for theta in thetas[:-1]:
                 design.append(theta.shape[1])
         self.design = design
 
-        if gamma != None:
+        if gamma:
             self.gamma = gamma
 
         layers = []
         nl = len(design) + 1
         for idx in range(nl):
-            if thetas != None:
+            if thetas:
                 theta = thetas[idx]
             else:
                 theta = np.array([])
@@ -240,7 +240,7 @@ class NeuralNetwork(BaseEstimator):
                 lout = ntargets
             else:
                 lout = design[idx]
-            if shiftlayer is not None:
+            if shiftlayer:
                 if idx == shiftlayer:
                     layers.append(layer(lin, lout, theta, shiftlayer=True))
                 else:
@@ -479,7 +479,7 @@ class NeuralNetwork(BaseEstimator):
                         grads[idx] = np.dot(a.transpose(), delta[:, 1:]) / N
 
                 # if this is a "shift-invar" layer, find the average grad
-                if self.shiftlayer is not None:
+                if self.shiftlayer:
                     if li == self.shiftlayer:
                         shape = self.layers[li].theta.shape
                         grads = grads.reshape(shape)
@@ -1010,7 +1010,7 @@ class NeuralNetwork(BaseEstimator):
         d["gamma"] = self.gamma
 
         print("pickling classifier to %s" % filename)
-        cPickle.dump(d, open(filename, "w"))
+        pickle.dump(d, open(filename, "w"))
 
     def write_thetas(self, basename="layer_"):
         """

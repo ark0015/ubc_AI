@@ -14,7 +14,7 @@ from ubc_AI.data import dataloader
 import ubc_AI.classifier as CLF
 import numpy as np
 import time
-import cPickle
+import pickle
 import copy
 from ubc_AI.data import singleclass_score
 
@@ -131,4 +131,4 @@ clfl2 = CLF.combinedAI([AIs[i] for i in combo], strategy="lr", C=0.1, penalty="l
 
 """training and saving the combined AI"""
 clfl2.fit(ldf.pfds, ldf.target)
-cPickle.dump(clfl2, open("clfl2_new.pkl", "wb"), protocol=2)
+pickle.dump(clfl2, open("clfl2_new.pkl", "wb"), protocol=2)

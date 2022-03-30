@@ -44,10 +44,10 @@ TO USE OUR PICKLED CLASSIFIERS:
 
 ***Be careful: When there are more than one cpu available, the default behavior of the code is to use multi-threading. The code will use up to 20 threads or max(cpu)-1. If you want to turn this behavior off, you can change the default max_threads parameter in file: threadit.py.
 
-import cPickle, glob, ubc_AI
+import pickle, glob, ubc_AI
 from ubc_AI.data import pfdreader
 AI_PATH = '/'.join(ubc_AI.__file__.split('/')[:-1])
-classifier = cPickle.load(open(AI_PATH+'/trained_AI/clfl2_BD.pkl','rb'))
+classifier = pickle.load(open(AI_PATH+'/trained_AI/clfl2_BD.pkl','rb'))
 pfdfile = glob.glob('*.pfd')
 AI_scores = classifier.report_score([pfdreader(f) for f in pfdfile])
 text = '\n'.join(['%s %s' % (pfdfile[i], AI_scores[i]) for i in range(len(pfdfile))])

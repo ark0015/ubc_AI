@@ -20,7 +20,7 @@ def threadit(func, arglist, OnOffSwitch={"state": False}, num_threads=40):
     def worker(q, retq, pipe, func, arglist):
         while True:
             idx = q.get()
-            if idx is not None:
+            if idx:
                 try:
                     retq.put({idx: func(*(arglist[idx]))})
                 except:

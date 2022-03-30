@@ -681,7 +681,7 @@ def feature_curve(
     return train_score, test_score, vals, vals[test_score.argmin()]
 
 
-import cPickle
+import pickle
 
 
 class datafitter(object):
@@ -697,7 +697,7 @@ class datafitter(object):
         """
         self.trainclassifiers = {}
         with open(filename, "r") as fileobj:
-            originaldata = cPickle.load(fileobj)
+            originaldata = pickle.load(fileobj)
             self.pfds = originaldata["pfds"]
             self.orig_target = originaldata["target"]
             if classmap == None:

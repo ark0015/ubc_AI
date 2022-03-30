@@ -12,7 +12,7 @@ tips/tricks/notes:
 * if training set is large (>O(100)) and redundant, use stochastic gradient descent (batch_size=1), otherwise use conjugate descent (batch_size > 1)
 *  
 """
-import cPickle as pickle
+import pickle as pickle
 import logging
 import numpy as np
 from collections import OrderedDict
@@ -255,7 +255,7 @@ class CNN(object):
 
 class MetaCNN(BaseEstimator):
     """
-    the actual CNN is not init-ed until .fit is called.
+    the actual CNN != init-ed until .fit is called.
     We determine the image input size (assumed square images) and
     the number of outputs in .fit from the training data
 
@@ -276,7 +276,7 @@ class MetaCNN(BaseEstimator):
         L2_reg=0.00,
         use_symbolic_softmax=False,
         ### Note, n_in and n_out are actually set in
-        ### .fit, they are here to help cPickle
+        ### .fit, they are here to help pickle
         n_in=50,
         n_out=2,
     ):
@@ -384,8 +384,8 @@ class MetaCNN(BaseEstimator):
         self.n_out = len(np.unique(Y_train))
         self.ready()
 
-        if X_test is not None:
-            assert Y_test is not None
+        if X_test:
+            assert Y_test
             interactive = True
             test_set_x, test_set_y = self.shared_dataset((X_test, Y_test))
         else:

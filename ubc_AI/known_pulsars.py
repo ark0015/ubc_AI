@@ -858,7 +858,7 @@ def matches(allpulsars, pulsar, sep=0.6, harm_match=False, DM_match=False):
             pdiff = abs(1.0 - float(den) / float(num) * pulsar.P0 / v.P0)
             if pdiff > 1:
                 amatch = False
-                print("%s is not a harmonic match (rejecting)" % k)
+                print("%s != a harmonic match (rejecting)" % k)
 
         ## reject nearby objects if 15% difference in DM
         if amatch and DM_match:

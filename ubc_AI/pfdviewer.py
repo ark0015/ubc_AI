@@ -16,7 +16,7 @@ png: quick to display
 
 """
 import atexit
-import cPickle
+import pickle
 import datetime
 import fractions
 import glob
@@ -178,13 +178,13 @@ class MainFrameGTK(Gtk.Window):
         self.tmpAI_DMbins = self.builder.get_object("DMbins_vote")
         self.tmpAI_tog = self.builder.get_object("tmpAI_tog")
         self.tmpAI_lab = self.builder.get_object("tmpAI_lab")
-        if tmpAI is not None:
-            self.tmpAI = cPickle.load(open(tmpAI, "r"))
+        if tmpAI:
+            self.tmpAI = pickle.load(open(tmpAI, "r"))
             self.tmpAI_tog.set_active(1)
             self.info_win.show_all()
             self.tmpAI_exp.set_expanded(1)
             # hack to get the checkmark "on", and preserve the tmpAI
-            self.tmpAI = cPickle.load(open(tmpAI, "r"))
+            self.tmpAI = pickle.load(open(tmpAI, "r"))
         #            self.info_win.resize()
         else:
             self.tmpAI = None
@@ -243,18 +243,18 @@ class MainFrameGTK(Gtk.Window):
         self.knownpulsars = {}
         # ATNF, PALFA and GBNCC list of known pulsars
         if exists("%s/known_pulsars.pkl" % AI_path):
-            self.knownpulsars = cPickle.load(open("%s/known_pulsars.pkl" % AI_path))
+            self.knownpulsars = pickle.load(open("%s/known_pulsars.pkl" % AI_path))
         elif exists("known_pulsars.pkl"):
-            self.knownpulsars = cPickle.load(open("known_pulsars.pkl"))
+            self.knownpulsars = pickle.load(open("known_pulsars.pkl"))
         else:
             self.knownpulsars = known_pulsars.get_allpulsars()
         # if we were passed a data file, read it in
-        if data != None:
+        if data:
             self.on_open(event="load", fin=data)
         else:
             self.data = None
         # start with default and '<new>' voters
-        if self.data != None:
+        if self.data:
             self.voters = [
                 name for name in self.data.dtype.names[1:] if not name.endswith("_FL")
             ]
@@ -629,7 +629,7 @@ class MainFrameGTK(Gtk.Window):
                     self.PALFA_download_qry(fname)
         elif key == "Delete":
             # remove this file from the list of tracked files
-            if this_iter is not None:
+            if this_iter:
                 fname = self.pfdstore[this_iter][1]
                 next_path = model.get_path(next_iter)
                 self.remove_fname(fname)
@@ -645,7 +645,7 @@ class MainFrameGTK(Gtk.Window):
             self.FL_text.set_text("FL vote:\n (%s)" % a)
 
         # data-related (needs to be loaded)
-        if self.data != None:
+        if self.data:
             if key in votes:
                 cand_vote += 1
 
@@ -684,7 +684,7 @@ class MainFrameGTK(Gtk.Window):
                     self.FL_text.set_text("FL vote:\n (%s)" % a)
 
                 # advance to the next candidate?
-                if next_iter is not None:
+                if next_iter:
                     if FL and value in [0, 1]:
                         if self.fl_nvote % 5 == 0:
                             # then we've done all the FL voting
@@ -776,7 +776,7 @@ class MainFrameGTK(Gtk.Window):
         if self.active_voter:
             act_name = self.voters[self.active_voter]
             # update the Treeview...
-            if self.data is not None:
+            if self.data:
 
                 col1 = self.col1.get_active_text()
                 col2 = self.col2.get_active_text()
@@ -853,7 +853,7 @@ class MainFrameGTK(Gtk.Window):
         change the pfdstore whenever we change the column box
 
         """
-        if self.data != None and self.active_col1 != None and self.active_col2 != None:
+        if self.data and self.active_col1 and self.active_col2:
 
             col1 = self.col1.get_active_text()
             col2 = self.col2.get_active_text()
@@ -944,7 +944,7 @@ class MainFrameGTK(Gtk.Window):
             FL = True
 
         ncol = self.pfdstore.get_n_columns()
-        if tmpiter != None:
+        if tmpiter:
             name = tmpstore.get_value(tmpiter, 1)
             if self.data_fromQry:
                 idx = np.where(self.qry_results["filename"] == basename(name))[0]
@@ -960,7 +960,7 @@ class MainFrameGTK(Gtk.Window):
             if (
                 exists(fname)
                 and fname.endswith(".pfd")
-                and (self.tmpAI != None)
+                and (self.tmpAI)
                 and self.tmpAI_tog.get_active()
             ):
                 if fname not in self.tmpAI_avgs:
@@ -973,7 +973,7 @@ class MainFrameGTK(Gtk.Window):
                     avgs = self.tmpAI_avgs[fname]
                 self.update_tmpAI_votemat(avgs)
                 disp_apnd = "(tmpAI: %0.3f)" % (avgs["overall"])
-            elif (self.tmpAI != None) and self.tmpAI_tog.get_active():
+            elif (self.tmpAI) and self.tmpAI_tog.get_active():
                 avgs = {
                     "phasebins": np.nan,
                     "subbands": np.nan,
@@ -1195,7 +1195,7 @@ class MainFrameGTK(Gtk.Window):
 
         Notes:
         * We save the files in /tmp/AIview*,
-        * If tmpAI is not None, we use its' pca/nbins
+        * If tmpAI, we use its' pca/nbins
           (we take the first of each type of subplot in the list_of_AIs)
 
         """
@@ -1216,7 +1216,7 @@ class MainFrameGTK(Gtk.Window):
             nbins = None
             npca_comp = None
             # use the tmpAI values if tmpAI is loaded
-            if self.tmpAI is not None:
+            if self.tmpAI:
                 for tai in self.tmpAI.list_of_AIs:
                     if inp[2] in tai.feature:
                         ai = tai
@@ -1224,13 +1224,13 @@ class MainFrameGTK(Gtk.Window):
                         if ai.use_pca:
                             pca = ai.pca
                             npca_comp = ai.pca.n_components
-            if nbins is not None:
+            if nbins:
                 self.builder.get_object(inp[0]).set_text(str(nbins))
                 self.builder.get_object(inp[0]).set_editable(0)
             else:
                 self.builder.get_object(inp[0]).set_editable(1)
                 nbins = self.builder.get_object(inp[0]).get_text()
-            if npca_comp is not None:
+            if npca_comp:
                 self.builder.get_object(inp[1]).set_text(str(npca_comp))
                 self.builder.get_object(inp[1]).set_editable(0)
             else:
@@ -1254,7 +1254,7 @@ class MainFrameGTK(Gtk.Window):
                     pca.fit(data)
                     pcadata = pca.transform(data)
                     data = pca.inverse_transform(pcadata)
-                elif pca is not None:
+                elif pca:
                     pcadata = pca.transform(data)
                     data = pca.inverse_transform(pcadata)
                 ax.plot(data)
@@ -1269,7 +1269,7 @@ class MainFrameGTK(Gtk.Window):
                     rd = data.reshape(nbins, nbins)
                     pca.fit(rd)
                     data = pca.inverse_transform(pca.transform(rd)).flatten()
-                elif pca is not None:
+                elif pca:
                     #                    rd = data.reshape(nbins,nbins)
                     data = pca.inverse_transform(pca.transform(data)).flatten()
                 ax.imshow(data.reshape(nbins, nbins), cmap=plt.cm.gray_r)
@@ -1283,7 +1283,7 @@ class MainFrameGTK(Gtk.Window):
                     rd = data.reshape(nbins, nbins)
                     pca.fit(rd)
                     data = pca.inverse_transform(pca.transform(rd)).flatten()
-                elif pca is not None:
+                elif pca:
                     #                    rd = data.reshape(nbins,nbins)
                     data = pca.inverse_transform(pca.transform(data)).flatten()
                 ax.imshow(data.reshape(nbins, nbins), cmap=plt.cm.gray_r)
@@ -1295,7 +1295,7 @@ class MainFrameGTK(Gtk.Window):
                     pca = PCA(n_components=npca_comp).fit(data)
                     pcadata = pca.transform(data)
                     data = pca.inverse_transform(pcadata)
-                elif pca is not None:
+                elif pca:
                     pcadata = pca.transform(data)
                     data = pca.inverse_transform(pcadata)
                 ax.plot(data)
@@ -1366,7 +1366,7 @@ class MainFrameGTK(Gtk.Window):
         FL : are we doing feature labeling? then use self.fl_nvote
 
         """
-        if this_iter != None:
+        if this_iter:
             # update self.data (since dealing with TreeStore blows my mind)
             n, fname, x, oval = self.pfdstore[this_iter]
             col1 = self.col1.get_active_text()
@@ -1410,7 +1410,7 @@ class MainFrameGTK(Gtk.Window):
         # we find the candidate, then switch to it
         pfd_iter = self.pfdstore.get_iter_first()
         found = False
-        while pfd_iter is not None:
+        while pfd_iter:
             candname = self.pfdstore[pfd_iter][1]
             if basename(candname) == basename(fname):
                 found = True
@@ -1437,7 +1437,7 @@ class MainFrameGTK(Gtk.Window):
             tmpiter = None
 
         ncol = self.pfdstore.get_n_columns()
-        if tmpiter != None:
+        if tmpiter:
 
             #            candname = os.path.join(self.basedir, tmpstore.get_value(tmpiter, 0))
             candname = tmpstore.get_value(tmpiter, 1)
@@ -1485,7 +1485,7 @@ class MainFrameGTK(Gtk.Window):
                     if (
                         exists(fname)
                         and fname.endswith(".pfd")
-                        and (self.tmpAI is not None)
+                        and (self.tmpAI)
                         and self.tmpAI_tog.get_active()
                     ):
                         if fname not in self.tmpAI_avgs:
@@ -1546,7 +1546,7 @@ class MainFrameGTK(Gtk.Window):
             if response == Gtk.ResponseType.OK:
                 fname = dialog.get_filename()
                 try:
-                    self.tmpAI = cPickle.load(open(fname))
+                    self.tmpAI = pickle.load(open(fname))
                     self.tmpAI_lab.set_text(basename(fname))
                 except (IOError, EOFError, AttributeError):
                     print("couldn't load %s" % fname)
@@ -1742,7 +1742,7 @@ class MainFrameGTK(Gtk.Window):
             d = ""
             while d == "":
                 d = inputbox("pfdviewer", "choose your voting name")
-            if d != None:
+            if d:
                 if d not in self.voters:
                     note = "adding voter data for %s" % d
                     print(note)
@@ -1775,7 +1775,7 @@ class MainFrameGTK(Gtk.Window):
             act_name = self.voters[self.active_voter]
             if self.fl_voting_tog.get_active():
                 act_name += "_FL"
-            if self.data is not None:
+            if self.data:
                 if act_name not in self.data.dtype.names:
                     self.data = add_voter(act_name, self.data, this_dtype="5i8")
             # print(self.data[act_name])
@@ -1917,7 +1917,7 @@ class MainFrameGTK(Gtk.Window):
             )
 
         # add all the candidates ranked as pulsars to the list of known_pulsars
-        if self.data is not None:
+        if self.data:
             for v in self.data.dtype.names[1:]:
                 # skip all feature-label voters
                 if v.endswith("_FL"):
@@ -2146,7 +2146,7 @@ class MainFrameGTK(Gtk.Window):
         else:
             tmpiter = None
 
-        if tmpiter != None:
+        if tmpiter:
             if self.data_fromQry:
                 basedir = self.qrybasedir
             else:
@@ -2201,7 +2201,7 @@ class MainFrameGTK(Gtk.Window):
                 except (IOError, ValueError):
                     pass
 
-            if exists(fname) and (pfd != None or arch != None or spd != None):
+            if exists(fname) and (pfd or arch or spd):
                 if float(dec.split(":")[0]) > 0:
                     sgn = "+"
                 else:
@@ -2353,7 +2353,7 @@ class MainFrameGTK(Gtk.Window):
                 self.pmatch_tree.scroll_to_cell(nextpath, use_align=False)
             else:
                 first_iter = self.pmatch_store.get_iter_first()
-                if first_iter is not None:
+                if first_iter:
                     path = model.get_path(first_iter)
                     self.pmatch_tree.scroll_to_cell(path)
                     self.pmatch_tree.set_cursor(path)
@@ -2477,7 +2477,7 @@ class MainFrameGTK(Gtk.Window):
         fout = abspath("known_pulsars.pkl")
         if self.knownpulsars == None:
             self.knownpulsars = newlist
-            cPickle.dump(self.knownpulsars, open(fout, "w"))
+            pickle.dump(self.knownpulsars, open(fout, "w"))
             self.statusbar.push(
                 0, "Saved list of %s pulsars to %s" % (len(self.knownpulsars), fout)
             )
@@ -2488,7 +2488,7 @@ class MainFrameGTK(Gtk.Window):
                 self.statusbar.push(
                     0, "Added %s new pulsars. Saving to %s" % (n_new, fout)
                 )
-                cPickle.dump(self.knownpulsars, open(fout, "w"))
+                pickle.dump(self.knownpulsars, open(fout, "w"))
             else:
                 self.statusbar.push(0, "No new pulsars listed")
         dlg.destroy()
@@ -2547,7 +2547,7 @@ class MainFrameGTK(Gtk.Window):
         srt = self.palfaqrybuf.get_start_iter()
         stp = self.palfaqrybuf.get_end_iter()
         qry = self.palfaqrybuf.get_text(srt, stp, 1)
-        # if "by candidateid" is not active we still use that query to download the filelocation
+        # if "by candidateid" != active we still use that query to download the filelocation
         if (
             qry
             != "SELECT * FROM PDM_Candidate_Binaries_Filesystem as t where t.pdm_cand_id = %s"
@@ -2579,7 +2579,7 @@ class MainFrameGTK(Gtk.Window):
         self.qry_results["filename"] = np.array(fn_list)
         self.qry_results["pngname"] = np.array([i[0] for i in png_list])
         # keep: if we vote or 'd'ownload on candidate, we keep it.
-        # default is not to keep it
+        # default != to keep it
         self.qry_results["keep"] = np.array([False for i in png_list])
 
         if len(loc_list) > 0:
@@ -2588,7 +2588,7 @@ class MainFrameGTK(Gtk.Window):
             self.qry_dwnld.hide()
         # write out the pngs to self.qrybasedir if they don't already exist
         # and create a file listing the candidates together with current voter
-        if (self.qrybasedir is not None) and (not os.path.exists(self.qrybasedir)):
+        if (self.qrybasedir) and (not os.path.exists(self.qrybasedir)):
             os.makedirs(self.qrybasedir)
         temp = tempfile.NamedTemporaryFile(
             prefix="PFDqry_", suffix=".txt", dir=self.qrybasedir, delete=False
@@ -2743,7 +2743,7 @@ class MainFrameGTK(Gtk.Window):
         if (
             exists(savename)
             and savename.endswith(".pfd")
-            and (self.tmpAI != None)
+            and (self.tmpAI)
             and self.tmpAI_tog.get_active()
         ):
             if savename not in self.tmpAI_avgs:
@@ -2923,7 +2923,7 @@ def convert(fin):
 
             # show_pfd uses pfd.pgdev for the output filename
             # move that to filename.ps
-            if PFD != None:
+            if PFD:
                 pfd = PFD(full_path)
                 show_name = pfd.pgdev.replace(".ps/CPS", "")
                 for ext in ["ps", "bestprof"]:
@@ -3155,7 +3155,7 @@ def load_data(fname):
         except (IOError):
             data = None
             print("Couldn't parse file %s" % fname)
-        if data is not None:
+        if data:
             if has_fl_tuple:
                 dtypes = data.dtype.descr
                 new_dtypes = []
@@ -3175,7 +3175,7 @@ def load_data(fname):
                 data = add_voter("featurevoter", data)
                 data["featurevoter_FL"] = FLdata.tolist()
 
-    if data is not None:
+    if data:
         if len(data.dtype.names) == 1:  # fname alone!
             name = inputbox(
                 "Voter chooser",
@@ -3428,7 +3428,7 @@ if __name__ == "__main__":
     if len(args) > 0 and opts.data is None:
         opts.data = args[0]
 
-    if opts.tmpAI is not None:
+    if opts.tmpAI:
         if not os.path.exists(opts.tmpAI):
             opts.tmpAI = None
 

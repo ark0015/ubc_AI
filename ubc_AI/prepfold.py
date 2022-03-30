@@ -299,7 +299,7 @@ class pfd:
         self.subdelays_bins += new_subdelays_bins
         self.sumprof = self.profs.sum(0).sum(0)
         if Num.fabs((self.sumprof / self.proflen).sum() - self.avgprof) > 1.0:
-            print("self.avgprof is not the correct value!")
+            print("self.avgprof != the correct value!")
         self.currdm = DM
 
     def freq_offsets(self, p=None, pd=None, pdd=None):
@@ -325,11 +325,11 @@ class pfd:
                 bestp = self.topo_p1
                 bestpd = self.topo_p2
                 bestpdd = self.topo_p3
-        if p is not None:
+        if p:
             bestp = p
-        if pd is not None:
+        if pd:
             bestpd = pd
-        if pdd is not None:
+        if pdd:
             bestpdd = pdd
 
         # self.fold_p[123] are actually frequencies, convert to periods
@@ -519,7 +519,7 @@ class pfd:
 
         self.sumprof = self.profs.sum(0).sum(0)
         if Num.fabs((self.sumprof / self.proflen).sum() - self.avgprof) > 1.0:
-            print("self.avgprof is not the correct value!")
+            print("self.avgprof != the correct value!")
 
         # Save current p, pd, pdd
         self.curr_p1, self.curr_p2, self.curr_p3 = p, pd, pdd
@@ -531,7 +531,7 @@ class pfd:
                 array of profiles.
         """
         if self.npart % new_npart:
-            print("Warning!  The new number of intervals (%d) is not a" % new_npart)
+            print("Warning!  The new number of intervals (%d) != a" % new_npart)
             print(
                 "          divisor of the original number of intervals (%d)!"
                 % self.npart
@@ -539,7 +539,7 @@ class pfd:
             print("Doing nothing.")
             return None
         if self.nsub % new_nsub:
-            print("Warning!  The new number of subbands (%d) is not a" % new_nsub)
+            print("Warning!  The new number of subbands (%d) != a" % new_nsub)
             print(
                 "          divisor of the original number of subbands (%d)!" % self.nsub
             )
@@ -624,7 +624,7 @@ class pfd:
         if not self.__dict__.has_key("subdelays"):
             print("Dedispersing first...")
             self.dedisperse()
-        if phasebins is not "All":
+        if phasebins != "All":
             lo, hi = phasebins
             profs = self.profs[:, :, lo:hi].sum(1)
         else:
@@ -654,7 +654,7 @@ class pfd:
         if not self.__dict__.has_key("subdelays"):
             print("Dedispersing first...")
             self.dedisperse()
-        if phasebins is not "All":
+        if phasebins != "All":
             lo, hi = phasebins
             profs = self.profs[:, :, lo:hi].sum(0)
         else:
@@ -808,8 +808,8 @@ class pfd:
                 frequency.  Return a 2D array containing the de-dispersed
                 profiles as a function of time (i.e. shape = (npart, proflen)),
                                 and the reduced chi^2 of the resulting summed profile.
-                If profs is not None, then use profs instead of self.profs.
-                                If shiftsubs is not False, then actually correct the subbands
+                If profs, then use profs instead of self.profs.
+                                If shiftsubs != False, then actually correct the subbands
                                 instead of a 2D projection of them.
         """
         if not self.__dict__.has_key("subdelays"):

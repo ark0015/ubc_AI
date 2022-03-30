@@ -47,7 +47,7 @@ class combinedAI(object):
                     requires 'nvote' argument too (the number of votes to be considered a pulsar)
         *'adaboost': implementation of http://en.wikipedia.org/wiki/Adaboost
                     *only works for 2-class systems
-                    *predict_proba output is not too good (arxiv.org/pdf/1207.1403.pdf)
+                    *predict_proba output != too good (arxiv.org/pdf/1207.1403.pdf)
         *'lr': uses LogisticRegression on the prediction matrix from list_of_AIs,
                and makes final prediction from the lr(predictions)
         *'svm': uses SVM on the prediction matrix from the list_of_AIs,
@@ -79,7 +79,7 @@ class combinedAI(object):
         self.list_of_AIs = list_of_AIs
         self.strategy = strategy
         if strategy != "vote" and strategy not in self.AIonAIs:
-            note = "strategy %s is not recognized" % strategy
+            note = "strategy %s != recognized" % strategy
             raise MyError(note)
         if strategy == "lr":
             self.AIonAI = linear_model.LogisticRegression(**kwds)
@@ -335,12 +335,12 @@ class combinedAI(object):
             pfds = [pfds]
 
         if not self.__dict__.has_key("prior_freq_dist"):
-            import cPickle
+            import pickle
             import ubc_AI
 
             ubcAI_path = ubc_AI.__path__[0]
             # Note: we expect a dictionary whose key is 'Pfr_over_Pfp'
-            self.prior_freq_dist = cPickle.load(open(ubcAI_path + "/" + dist, "rb"))
+            self.prior_freq_dist = pickle.load(open(ubcAI_path + "/" + dist, "rb"))
 
         def getp0(pfd):
             # pfd.__init__('self')
@@ -714,7 +714,7 @@ class adaboost(object):
         we accept labels (0,1), but process on (-1,1) labels
 
         """
-        if self.platt != None:
+        if self.platt:
             # split the data into training and x-val (for predict_proba fit)
             from random import shuffle
 
@@ -791,7 +791,7 @@ class adaboost(object):
         self.alphas = alphas
 
         # finally, fit the platt calibration for predict_proba functionality
-        if self.platt != None:
+        if self.platt:
             test_preds2 = np.where(test_preds != 1, -1, 1)
             this_preds = np.transpose(
                 [np.where(np.dot(test_preds2, self.weights) > 0, 1, 0)]
@@ -848,7 +848,7 @@ class adaboost(object):
             nsamples = 1
             lops = np.array([lops])
 
-        if self.platt is not None:
+        if self.platt:
             # this techniques doesn't do that well
             f = np.transpose([self.predict(lops)])  # [nsamples x 1]
             return self.platt.predict_proba(f)

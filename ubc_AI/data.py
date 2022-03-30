@@ -3,7 +3,7 @@ A moudule for the new datafitter class that works with the new classifier class.
 """
 import numpy as np
 from random import shuffle
-import cPickle
+import pickle
 from scipy import mgrid
 import os, sys
 from ubc_AI.training import pfddata
@@ -231,7 +231,7 @@ class dataloader(object):
         self.trainclassifiers = {}
         if filename.endswith(".pkl"):
             with open(filename, "r") as fileobj:
-                originaldata = cPickle.load(fileobj)
+                originaldata = pickle.load(fileobj)
                 self.pfds = originaldata["pfds"]
                 if (
                     type(originaldata["target"]) in [list]

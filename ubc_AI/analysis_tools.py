@@ -168,7 +168,7 @@ def cut_performance(
         "subbands": 4,
     }
 
-    if features is not None:
+    if features:
         assert target.ndim == 2
 
     performance = {}
@@ -180,7 +180,7 @@ def cut_performance(
     rfi_hist = {}
     for k, v in AIs.iteritems():
         # are we using feature labeling targets and classifiers?
-        if features is not None:
+        if features:
             if features[k] in targetmap:
                 label = target[:, targetmap[features[k]]]
             else:
@@ -339,7 +339,7 @@ def plot_neuralactivity(
         ax.set_xlabel("phase bin")
         ax.set_ylabel("Intensity")
         ax.set_title(title)
-    if savename is not None:
+    if savename:
         fig.savefig(savename)
     else:
         plt.show()
@@ -485,7 +485,7 @@ def plot_classifier_shiftpredict(clf, pfd, compare=None):
                 "%.03f" % preds[shift],
                 bbox={"facecolor": "blue", "alpha": 0.5, "pad": 10},
             )
-            if compare is not None:
+            if compare:
                 for name, data in compare:
                     cbin = len(data)
                     comp_coords = mgrid[1 : 1.0 - 1.0 / cbin : cbin * 1j]
@@ -513,7 +513,7 @@ def plot_classifier_shiftpredict(clf, pfd, compare=None):
             )
             ax1.set_ylim(0, 1)
             ax1.set_xlabel("Phase Shift")
-            if compare is not None:
+            if compare:
                 names = [i for i, v in compare]
                 #                    ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                 #                                ncol=2, mode="expand", borderaxespad=0.)
@@ -573,7 +573,7 @@ def plot_classifier_shiftpredict(clf, pfd, compare=None):
                 "%.03f" % preds[shift],
                 bbox={"facecolor": "blue", "alpha": 0.5, "pad": 10},
             )
-            if compare is not None:
+            if compare:
                 for name, data in compare:
                     cbin = len(data)
                     comp_coords = mgrid[0 : 1.0 - 1.0 / cbin : cbin * 1j]
@@ -601,7 +601,7 @@ def plot_classifier_shiftpredict(clf, pfd, compare=None):
             )
             ax1.set_ylim(0, 1)
             plt.setp(ax1.get_xticklabels(), visible=False)
-            if compare is not None:
+            if compare:
                 names = [i for i, v in compare]
                 #                    ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                 #                               ncol=2, mode="expand", borderaxespad=0.)
