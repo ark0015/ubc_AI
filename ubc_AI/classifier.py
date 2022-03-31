@@ -154,7 +154,7 @@ class combinedAI(object):
         if not InteractivePy:
             resultdict = threadit(threadfit, input_data)
 
-            for n, clf in resultdict.iteritems():
+            for n, clf in resultdict.items():
                 self.list_of_AIs[n] = clf
 
         self.nclasses = len(np.unique(target))
@@ -784,7 +784,7 @@ class adaboost(object):
             w = np.ones(npreds, dtype=float) / npreds
         else:
             w = np.zeros(npreds, dtype=float)
-        for k, v in clfs.iteritems():
+        for k, v in clfs.items():
             w[v] = alphas[k]
         self.weights = w
         self.clfs = clfs
@@ -906,7 +906,7 @@ def extractfeatures(AIlist, pfds):
             return pfd
 
         resultdict = threadit(getfeature, [[p] for p in pfds])
-        for n, pfd in resultdict.iteritems():
+        for n, pfd in resultdict.items():
             if pfd == None:
                 print("ZeroDivisionError: ", pfds[n].pfdfile)
                 raise ZeroDivisionError

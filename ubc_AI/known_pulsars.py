@@ -33,10 +33,10 @@ def get_allpulsars():
         "ryan": ryan_pulsars(),
     }
 
-    for k, v in atnf.iteritems():
+    for k, v in atnf.items():
         allpulsars[k] = v
-    for survey, lst in two_join.iteritems():
-        for k, v in lst.iteritems():
+    for survey, lst in two_join.items():
+        for k, v in lst.items():
             if k in allpulsars:
                 # add it in if P0 differ by 10ms
                 try:
@@ -826,7 +826,7 @@ def matches(allpulsars, pulsar, sep=0.6, harm_match=False, DM_match=False):
     pra = hhmm2deg(pulsar.ra)
     pdec = ddmm2deg(pulsar.dec)
     orig_sep = sep
-    for k, v in allpulsars.iteritems():
+    for k, v in allpulsars.items():
         amatch = False
 
         ## find positional matches

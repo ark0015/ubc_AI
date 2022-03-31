@@ -1,8 +1,10 @@
-import numpy as Num
-import copy, random, struct, sys
-import psr_utils, infodata, polycos, Pgplot
-from types import StringType, FloatType, IntType
-from bestprof import bestprof
+import numpy as np
+import sys
+import struct
+# import copy, random, struct, sys
+from presto import psr_utils#, infodata, polycos, Pgplot
+from presto.bestprof import bestprof
+from ubc_AI.utils import fromfile
 
 
 class pfd:
@@ -19,7 +21,7 @@ class pfd:
         testswap = struct.unpack(swapchar + "i" * 5, data)
         # This is a hack to try and test the endianness of the data.
         # None of the 5 values should be a large positive number.
-        if (Num.fabs(Num.asarray(testswap))).max() > 100000:
+        if (np.fabs(np.asarray(testswap))).max() > 100000:
             swapchar = ">"  # this is big-endian
         (
             self.numdms,
@@ -38,17 +40,23 @@ class pfd:
             self.npfact,
         ) = struct.unpack(swapchar + "i" * 7, infile.read(7 * 4))
         self.filenm = infile.read(struct.unpack(swapchar + "i", infile.read(4))[0])
-        self.candnm = infile.read(struct.unpack(swapchar + "i", infile.read(4))[0])
-        self.telescope = infile.read(struct.unpack(swapchar + "i", infile.read(4))[0])
+        self.candnm = infile.read(
+            struct.unpack(swapchar + "i", infile.read(4))[0]
+        ).decode("utf-8")
+        self.telescope = infile.read(
+            struct.unpack(swapchar + "i", infile.read(4))[0]
+        ).decode("utf-8")
         self.pgdev = infile.read(struct.unpack(swapchar + "i", infile.read(4))[0])
         test = infile.read(16)
-        if not test[:8] == "Unknown":
-            self.rastr = test[: test.find("\0")]
+        if not test[:8] == b"Unknown" and b":" in test:
+            self.rastr = test[: test.find(b"\0")]
             test = infile.read(16)
-            self.decstr = test[: test.find("\0")]
+            self.decstr = test[: test.find(b"\0")]
         else:
             self.rastr = "Unknown"
             self.decstr = "Unknown"
+            if ":" not in test:
+                infile.seek(-16, 1)  # rewind the file before the bad read
         (self.dt, self.startT) = struct.unpack(swapchar + "dd", infile.read(2 * 8))
         (
             self.endT,
@@ -67,7 +75,7 @@ class pfd:
         # point accuracy is ~1 us!
         if self.telescope == "GBT":
             if (
-                Num.fabs(Num.fmod(self.dt, 8.192e-05) < 1e-12)
+                np.fabs(np.fmod(self.dt, 8.192e-05) < 1e-12)
                 and ("spigot" in filename.lower() or "guppi" not in filename.lower())
                 and (self.tepoch < 54832.0)
             ):
@@ -121,7 +129,7 @@ class pfd:
         self.curr_p1, self.curr_p2, self.curr_p3 = psr_utils.p_to_f(
             self.fold_p1, self.fold_p2, self.fold_p3
         )
-        self.pdelays_bins = Num.zeros(self.npart, dtype="d")
+        self.pdelays_bins = np.zeros(self.npart, dtype="d")
         (
             self.orb_p,
             self.orb_e,
@@ -131,41 +139,39 @@ class pfd:
             self.orb_pd,
             self.orb_wd,
         ) = struct.unpack(swapchar + "d" * 7, infile.read(7 * 8))
-        self.dms = Num.asarray(
+        self.dms = np.asarray(
             struct.unpack(swapchar + "d" * self.numdms, infile.read(self.numdms * 8))
         )
         if self.numdms == 1:
             self.dms = self.dms[0]
-        self.periods = Num.asarray(
+        self.periods = np.asarray(
             struct.unpack(
                 swapchar + "d" * self.numperiods, infile.read(self.numperiods * 8)
             )
         )
-        self.pdots = Num.asarray(
+        self.pdots = np.asarray(
             struct.unpack(
                 swapchar + "d" * self.numpdots, infile.read(self.numpdots * 8)
             )
         )
         self.numprofs = self.nsub * self.npart
         if swapchar == "<":  # little endian
-            self.profs = Num.zeros((self.npart, self.nsub, self.proflen), dtype="d")
+            self.profs = np.zeros((self.npart, self.nsub, self.proflen), dtype="d")
             for ii in range(self.npart):
                 for jj in range(self.nsub):
-                    self.profs[ii, jj, :] = Num.fromfile(
-                        infile, Num.float64, self.proflen
-                    )
+                    self.profs[ii, jj, :] = fromfile(infile, np.float64, self.proflen)
         else:
-            self.profs = Num.asarray(
+            self.profs = np.asarray(
                 struct.unpack(
                     swapchar + "d" * self.numprofs * self.proflen,
                     infile.read(self.numprofs * self.proflen * 8),
                 )
             )
-            self.profs = Num.reshape(self.profs, (self.npart, self.nsub, self.proflen))
+            self.profs = np.reshape(self.profs, (self.npart, self.nsub, self.proflen))
         if self.numchan == 1:
             try:
                 idata = infodata.infodata(
-                    self.filenm[: self.filenm.rfind(".")] + ".inf"
+                    self.filenm[: self.filenm.rfind(b".")] + b".inf"
                 )
                 try:
                     if idata.waveband == "Radio":
@@ -177,14 +183,14 @@ class pfd:
             except IOError:
                 print("Warning!  Can't open the .inf file for " + filename + "!")
         self.binspersec = self.fold_p1 * self.proflen
-        self.chanpersub = self.numchan / self.nsub
+        self.chanpersub = self.numchan // self.nsub
         self.subdeltafreq = self.chan_wid * self.chanpersub
         self.hifreq = self.lofreq + (self.numchan - 1) * self.chan_wid
         self.losubfreq = self.lofreq + self.subdeltafreq - self.chan_wid
         self.subfreqs = (
-            Num.arange(self.nsub, dtype="d") * self.subdeltafreq + self.losubfreq
+            np.arange(self.nsub, dtype="d") * self.subdeltafreq + self.losubfreq
         )
-        self.subdelays_bins = Num.zeros(self.nsub, dtype="d")
+        self.subdelays_bins = np.zeros(self.nsub, dtype="d")
         # Save current DM
         self.currdm = 0
         self.killed_subbands = []
@@ -193,19 +199,19 @@ class pfd:
         # Note: a foldstats struct is read in as a group of 7 doubles
         # the correspond to, in order:
         #    numdata, data_avg, data_var, numprof, prof_avg, prof_var, redchi
-        self.stats = Num.zeros((self.npart, self.nsub, 7), dtype="d")
+        self.stats = np.zeros((self.npart, self.nsub, 7), dtype="d")
         for ii in range(self.npart):
             currentstats = self.stats[ii]
             for jj in range(self.nsub):
                 if swapchar == "<":  # little endian
-                    currentstats[jj] = Num.fromfile(infile, Num.float64, 7)
+                    currentstats[jj] = fromfile(infile, np.float64, 7)
                 else:
-                    currentstats[jj] = Num.asarray(
+                    currentstats[jj] = np.asarray(
                         struct.unpack(swapchar + "d" * 7, infile.read(7 * 8))
                     )
             self.pts_per_fold.append(self.stats[ii][0][0])  # numdata from foldstats
-        self.start_secs = Num.add.accumulate([0] + self.pts_per_fold[:-1]) * self.dt
-        self.pts_per_fold = Num.asarray(self.pts_per_fold)
+        self.start_secs = np.add.accumulate([0] + self.pts_per_fold[:-1]) * self.dt
+        self.pts_per_fold = np.asarray(self.pts_per_fold)
         self.mid_secs = self.start_secs + 0.5 * self.dt * self.pts_per_fold
         if not self.tepoch == 0.0:
             self.start_topo_MJDs = self.start_secs / 86400.0 + self.tepoch
@@ -213,7 +219,7 @@ class pfd:
         if not self.bepoch == 0.0:
             self.start_bary_MJDs = self.start_secs / 86400.0 + self.bepoch
             self.mid_bary_MJDs = self.mid_secs / 86400.0 + self.bepoch
-        self.Nfolded = Num.add.reduce(self.pts_per_fold)
+        self.Nfolded = np.add.reduce(self.pts_per_fold)
         self.T = self.Nfolded * self.dt
         self.avgprof = (self.profs / self.proflen).sum()
         self.varprof = self.calc_varprof()
@@ -229,8 +235,9 @@ class pfd:
                 # If this doesn't work, we should try to use the barycentering calcs
                 # in the presto module.
                 try:
+                    psrname = self.candnm[4:]
                     self.polycos = polycos.polycos(
-                        self.candnm[4:], filenm=self.pfd_filename + ".polycos"
+                        psrname, filenm=self.pfd_filename + ".polycos"
                     )
                     midMJD = self.tepoch + 0.5 * self.T / 86400.0
                     self.avgvoverc = self.polycos.get_voverc(
@@ -248,11 +255,11 @@ class pfd:
         out = ""
         for k, v in self.__dict__.items():
             if k[:2] != "__":
-                if type(self.__dict__[k]) is StringType:
+                if isinstance(self.__dict__[k], str):
                     out += "%10s = '%s'\n" % (k, v)
-                elif type(self.__dict__[k]) is IntType:
+                elif isinstance(self.__dict__[k], int):
                     out += "%10s = %d\n" % (k, v)
-                elif type(self.__dict__[k]) is FloatType:
+                elif isinstance(self.__dict__[k], float):
                     out += "%10s = %-20.15g\n" % (k, v)
         return out
 
@@ -288,17 +295,17 @@ class pfd:
             # profs, we need to re-calculate the average profile value
             self.avgprof = (self.profs / self.proflen).sum()
         else:
-            new_subdelays_bins = Num.floor(delaybins + 0.5)
+            new_subdelays_bins = np.floor(delaybins + 0.5)
             for ii in range(self.nsub):
                 rotbins = int(new_subdelays_bins[ii]) % self.proflen
                 if rotbins:  # i.e. if not zero
                     subdata = self.profs[:, ii, :]
-                    self.profs[:, ii] = Num.concatenate(
+                    self.profs[:, ii] = np.concatenate(
                         (subdata[:, rotbins:], subdata[:, :rotbins]), 1
                     )
         self.subdelays_bins += new_subdelays_bins
         self.sumprof = self.profs.sum(0).sum(0)
-        if Num.fabs((self.sumprof / self.proflen).sum() - self.avgprof) > 1.0:
+        if np.fabs((self.sumprof / self.proflen).sum() - self.avgprof) > 1.0:
             print("self.avgprof != the correct value!")
         self.currdm = DM
 
@@ -403,8 +410,8 @@ class pfd:
         bin_dphi = 1.0 / self.proflen
         # If any of the offsets causes more than a 0.1-bin rotation over
         # the obs, then prepfold searched and we can't time using it
-        offsets = Num.fabs(Num.asarray(self.freq_offsets()))
-        dphis = offsets * Num.asarray([T, T**2.0 / 2.0, T**3.0 / 6.0])
+        offsets = np.fabs(np.asarray(self.freq_offsets()))
+        dphis = offsets * np.asarray([T, T**2.0 / 2.0, T**3.0 / 6.0])
         if max(dphis) > 0.1 * bin_dphi:
             return False
         else:
@@ -430,11 +437,11 @@ class pfd:
         delays = psr_utils.delay_from_foffsets(f_diff, fd_diff, fdd_diff, parttimes)
 
         # Convert from delays in phase to delays in bins
-        bin_delays = Num.fmod(delays * self.proflen, self.proflen) - self.pdelays_bins
+        bin_delays = np.fmod(delays * self.proflen, self.proflen) - self.pdelays_bins
 
         # Rotate subintegrations
         # subints = self.combine_profs(self.npart, 1)[:,0,:] # Slower than sum by ~9x
-        subints = Num.sum(self.profs, axis=1).squeeze()
+        subints = np.sum(self.profs, axis=1).squeeze()
         if interp:
             new_pdelays_bins = bin_delays
             for ii in range(self.npart):
@@ -444,11 +451,11 @@ class pfd:
                 # is shift-to-left
                 subints[ii, :] = psr_utils.fft_rotate(tmp_prof, -new_pdelays_bins[ii])
         else:
-            new_pdelays_bins = Num.floor(bin_delays + 0.5)
-            indices = Num.outer(Num.arange(self.proflen), Num.ones(self.npart))
-            indices = Num.mod(indices - new_pdelays_bins, self.proflen).T
-            indices += Num.outer(
-                Num.arange(self.npart) * self.proflen, Num.ones(self.proflen)
+            new_pdelays_bins = np.floor(bin_delays + 0.5)
+            indices = np.outer(np.arange(self.proflen), np.ones(self.npart))
+            indices = np.mod(indices - new_pdelays_bins, self.proflen).T
+            indices += np.outer(
+                np.arange(self.npart) * self.proflen, np.ones(self.proflen)
             )
             subints = subints.flatten("C")[indices.astype("i8")]
         return subints
@@ -490,11 +497,11 @@ class pfd:
         delays = psr_utils.delay_from_foffsets(f_diff, fd_diff, fdd_diff, parttimes)
 
         # Convert from delays in phase to delays in bins
-        bin_delays = Num.fmod(delays * self.proflen, self.proflen) - self.pdelays_bins
+        bin_delays = np.fmod(delays * self.proflen, self.proflen) - self.pdelays_bins
         if interp:
             new_pdelays_bins = bin_delays.astype(int)
         else:
-            new_pdelays_bins = Num.floor(bin_delays + 0.5).astype(int)
+            new_pdelays_bins = np.floor(bin_delays + 0.5).astype(int)
 
         # Rotate subintegrations
         for ii in range(self.nsub):
@@ -518,7 +525,7 @@ class pfd:
             self.avgprof = (self.profs / self.proflen).sum()
 
         self.sumprof = self.profs.sum(0).sum(0)
-        if Num.fabs((self.sumprof / self.proflen).sum() - self.avgprof) > 1.0:
+        if np.fabs((self.sumprof / self.proflen).sum() - self.avgprof) > 1.0:
             print("self.avgprof != the correct value!")
 
         # Save current p, pd, pdd
@@ -549,16 +556,16 @@ class pfd:
         dp = self.npart / new_npart
         ds = self.nsub / new_nsub
 
-        newprofs = Num.zeros((new_npart, new_nsub, self.proflen), "d")
+        newprofs = np.zeros((new_npart, new_nsub, self.proflen), "d")
         for ii in range(new_npart):
             # Combine the subbands if required
             if self.nsub > 1:
                 for jj in range(new_nsub):
-                    subprofs = Num.add.reduce(self.profs[:, jj * ds : (jj + 1) * ds], 1)
+                    subprofs = np.add.reduce(self.profs[:, jj * ds : (jj + 1) * ds], 1)
                     # Combine the time intervals
-                    newprofs[ii][jj] = Num.add.reduce(subprofs[ii * dp : (ii + 1) * dp])
+                    newprofs[ii][jj] = np.add.reduce(subprofs[ii * dp : (ii + 1) * dp])
             else:
-                newprofs[ii][0] = Num.add.reduce(self.profs[ii * dp : (ii + 1) * dp, 0])
+                newprofs[ii][0] = np.add.reduce(self.profs[ii * dp : (ii + 1) * dp, 0])
         return newprofs
 
     def kill_intervals(self, intervals):
@@ -608,9 +615,9 @@ class pfd:
                 as in prepfold.
         """
         # Use the same scaling as in prepfold_plot.c
-        global_max = Num.maximum.reduce(Num.maximum.reduce(array2d))
-        min_parts = Num.minimum.reduce(array2d, 1)
-        array2d = (array2d - min_parts[:, Num.newaxis]) / Num.fabs(global_max)
+        global_max = np.maximum.reduce(np.maximum.reduce(array2d))
+        min_parts = np.minimum.reduce(array2d, 1)
+        array2d = (array2d - min_parts[:, np.newaxis]) / np.fabs(global_max)
         Pgplot.plot2d(array2d, image="antigrey", **kwargs)
 
     def plot_intervals(self, phasebins="All", device="/xwin"):
@@ -637,7 +644,7 @@ class pfd:
             labx="Phase Bins",
             labx2="Pulse Phase",
             laby="Time Intervals",
-            rangex2=Num.asarray([lo, hi]) * 1.0 / self.proflen,
+            rangex2=np.asarray([lo, hi]) * 1.0 / self.proflen,
             laby2="Time (s)",
             rangey2=[0.0, self.T],
             device=device,
@@ -669,7 +676,7 @@ class pfd:
             labx="Phase Bins",
             labx2="Pulse Phase",
             laby="Subbands",
-            rangex2=Num.asarray([lo, hi]) * 1.0 / self.proflen,
+            rangex2=np.asarray([lo, hi]) * 1.0 / self.proflen,
             laby2="Frequency (MHz)",
             rangey2=[lof, hif],
             device=device,
@@ -696,7 +703,7 @@ class pfd:
         calc_redchi2(self, prof=None, avg=None, var=None):
             Return the calculated reduced-chi^2 of the current summed profile.
         """
-        if not self.__dict__.has_key("subdelays"):
+        if not "subdelays" in self.__dict__.keys():
             print("Dedispersing first...")
             self.dedisperse()
         if prof is None:
@@ -720,9 +727,9 @@ class pfd:
         if not interp:
             profs = sumprofs
         else:
-            profs = Num.zeros(Num.shape(sumprofs), dtype="d")
+            profs = np.zeros(np.shape(sumprofs), dtype="d")
         DMs = psr_utils.span(loDM, hiDM, N)
-        chis = Num.zeros(N, dtype="f")
+        chis = np.zeros(N, dtype="f")
         subdelays_bins = self.subdelays_bins.copy()
         for ii, DM in enumerate(DMs):
             subdelays = psr_utils.delay_from_DM(DM, self.barysubfreqs)
@@ -739,7 +746,7 @@ class pfd:
                 # profs, we need to re-calculate the average profile value
                 avgprof = (profs / self.proflen).sum()
             else:
-                new_subdelays_bins = Num.floor(delaybins + 0.5)
+                new_subdelays_bins = np.floor(delaybins + 0.5)
                 for jj in range(self.nsub):
                     profs[jj] = psr_utils.rotate(profs[jj], int(new_subdelays_bins[jj]))
                 subdelays_bins += new_subdelays_bins
@@ -771,13 +778,13 @@ class pfd:
                     continue
                 var += self.stats[part][sub][5]  # foldstats prof_var
             vars.append(var)
-        chis = Num.zeros(self.nsub, dtype="f")
+        chis = np.zeros(self.nsub, dtype="f")
         for ii in range(self.nsub):
             chis[ii] = self.calc_redchi2(prof=profs[ii], avg=avgs[ii], var=vars[ii])
         # Now plot it
         Pgplot.plotxy(
             chis,
-            labx="Subband Number",
+            labx="Subband npber",
             laby=r"Reduced-\gx\u2\d",
             rangey=[0.0, max(chis) * 1.1],
             device=device,
@@ -792,13 +799,13 @@ class pfd:
         """
         redchi2s = []
         for count in range(numtrials):
-            prof = Num.zeros(self.proflen, dtype="d")
+            prof = np.zeros(self.proflen, dtype="d")
             for ii in range(self.npart):
                 for jj in range(self.nsub):
                     tmpprof = copy.copy(self.profs[ii][jj])
                     prof += psr_utils.rotate(tmpprof, random.randrange(0, self.proflen))
             redchi2s.append(self.calc_redchi2(prof=prof))
-        return Num.mean(redchi2s)
+        return np.mean(redchi2s)
 
     def adjust_fold_frequency(self, phasebins, profs=None, shiftsubs=False):
         """
@@ -856,9 +863,9 @@ class pfd:
                 channels will be combined when making the DS.
         """
         # Determine the indices of the off-pulse region
-        indices = Num.arange(self.proflen)
-        Num.put(indices, Num.asarray(onbins), -1)
-        offbins = Num.compress(indices >= 0, Num.arange(self.proflen))
+        indices = np.arange(self.proflen)
+        np.put(indices, np.asarray(onbins), -1)
+        offbins = np.compress(indices >= 0, np.arange(self.proflen))
         numon = len(onbins)
         numoff = len(offbins)
         # De-disperse if required first
@@ -866,9 +873,9 @@ class pfd:
             print("Dedispersing first...")
             self.dedisperse()
         # The following is the average offpulse level
-        offpulse = Num.sum(Num.take(self.profs, offbins, 2), 2) / float(numoff)
+        offpulse = np.sum(np.take(self.profs, offbins, 2), 2) / float(numoff)
         # The following is the average onpulse level
-        onpulse = Num.sum(Num.take(self.profs, onbins, 2), 2) / float(numon)
+        onpulse = np.sum(np.take(self.profs, onbins, 2), 2) / float(numon)
         # Now make the DS
         self.DS = onpulse - offpulse
         self.DSnpart = self.npart
@@ -888,11 +895,11 @@ class pfd:
                 self.DSnpart = (self.npart / combineints) * combineints
                 self.DS = self.DS[: self.DSnpart, :]
             # Now reshape and add the neighboring intervals
-            self.DS = Num.reshape(
+            self.DS = np.reshape(
                 self.DS, (self.DSnpart / combineints, combineints, self.DSnsub)
             )
-            print(Num.shape(self.DS))
-            self.DS = Num.sum(self.DS, 1)
+            print(np.shape(self.DS))
+            self.DS = np.sum(self.DS, 1)
             self.DSstart_secs = self.DSstart_secs[::combineints]
             self.DSintdt *= combineints
             self.DSnpart /= combineints
@@ -903,16 +910,16 @@ class pfd:
                 self.DSnsub = (self.nsub / combinechans) * combinechans
                 self.DS = self.DS[:, : self.DSnsub]
             # Now reshape and add the neighboring intervals
-            self.DS = Num.reshape(
+            self.DS = np.reshape(
                 self.DS, (self.DSnpart, self.DSnsub / combinechans, combinechans)
             )
-            self.DS = Num.sum(self.DS, 2)
+            self.DS = np.sum(self.DS, 2)
             self.DSsubfreqs = psr_utils.running_avg(
                 self.subfreqs[: self.DSnsub], combinechans
             )
             self.DSsubdeltafreq *= combinechans
             self.DSnsub /= combinechans
-        print("DS shape = ", Num.shape(self.DS))
+        print("DS shape = ", np.shape(self.DS))
         # Plot it if required
         if plot:
             lof = self.subfreqs[0] - 0.5 * self.DSsubdeltafreq
@@ -924,9 +931,9 @@ class pfd:
                 rangex=[lof, hif],
                 rangey=[lot, hit],
                 labx="Frequency (MHz)",
-                labx2="Subband Number",
+                labx2="Subband npber",
                 laby="Time (s)",
-                laby2="Interval Number",
+                laby2="Interval npber",
                 rangex2=[0, self.DSnsub],
                 rangey2=[0, self.DSnpart],
                 device=device,
@@ -955,11 +962,11 @@ if __name__ == "__main__":
 
     # tp.plot_chi2_vs_sub()
     # (chis, DMs) = tp.plot_chi2_vs_DM(0.0, 50.0, 501, interp=1)
-    # best_index = Num.argmax(chis)
+    # best_index = np.argmax(chis)
     # print("Best DM = ", DMs[best_index]
 
     (chis, DMs) = tp.plot_chi2_vs_DM(0.0, 50.0, 501)
-    best_index = Num.argmax(chis)
+    best_index = np.argmax(chis)
     print("Best DM = ", DMs[best_index])
 
     tp.dedisperse()

@@ -17,7 +17,8 @@ class pfdreader(object):
     A new pfd reader class that only store the link to the file and the extracted data.
     """
 
-    SearchPATH = "/home/zhuww/work/AI_PFD/training/PFDfiles/pulsars/:/home/zhuww/work/AI_PFD/training/PFDfiles/RFIs/:/home/zhuww/work/AI_PFD/training/PFDfiles/nonpulsars/:/home/zhuww/work/AI_PFD/training/PFDfiles/harmonics/"
+    # SearchPATH = "/home/zhuww/work/AI_PFD/training/PFDfiles/pulsars/:/home/zhuww/work/AI_PFD/training/PFDfiles/RFIs/:/home/zhuww/work/AI_PFD/training/PFDfiles/nonpulsars/:/home/zhuww/work/AI_PFD/training/PFDfiles/harmonics/"
+    SearchPATH = os.path.dirname(os.path.abspath(__file__))
 
     def __init__(self, pfdfile):
         # search for the file
@@ -35,7 +36,7 @@ class pfdreader(object):
             if os.access(pfdfile, os.R_OK):
                 self.pfdfile = pfdfile
             else:
-                for path in self.SearchPATH.split(":"):
+                for path in SearchPATH.split(":"):
                     if os.access(path + pfdfile, os.R_OK):
                         self.pfdfile = path + pfdfile
                         break
@@ -80,11 +81,10 @@ class pfdreader(object):
                 elif os.path.splitext(self.pfdfile)[1] == ".spd":
                     pfd = SPdata(self.pfdfile, align=True)
                 else:
-                    print("unrecognized file format ", self.pfdfile)
-                    raise Error
+                    raise TypeError("unrecognized file format ", self.pfdfile)
             data = np.append(data, extract(key, value, pfd))
         # process the kwargs
-        for key, value in features.iteritems():
+        for key, value in features.items():
             feature = "%s:%s" % (key, value)
             if (feature not in self.extracted_feature) and (pfd is None):
                 if (
@@ -101,8 +101,7 @@ class pfdreader(object):
                 elif os.path.splitext(self.pfdfile)[1] == ".spd":
                     pfd = SPdata(self.pfdfile, align=True)
                 else:
-                    print("unrecognized file format ", self.pfdfile)
-                    raise Error
+                    raise TypeError("unrecognized file format ", self.pfdfile)
             data = np.append(data, extract(key, value, pfd))
         del pfd
         return data
@@ -243,7 +242,7 @@ class dataloader(object):
                     else:
                         self.classmap = classmap
                     self.target = self.orig_target[:]
-                    for k, v in self.classmap.iteritems():
+                    for k, v in self.classmap.items():
                         for val in v:
                             self.target[self.orig_target == val] = k
                 else:
@@ -273,8 +272,7 @@ class dataloader(object):
             ).T
 
         else:
-            print("Don't recognize the file surfix.")
-            raise Error
+            raise NameError("Don't recognize the file surfix.")
         self.extracted_feature = []
 
     def extractfeatures(self, clf):
@@ -285,7 +283,7 @@ class dataloader(object):
         elif "feature" in clf.__dict__:
             AIlist = [clf]
         else:
-            raise MyError
+            raise NotImplementedError
         features = {}
         vargf = []
         items = []
@@ -303,7 +301,7 @@ class dataloader(object):
 
         if len(vargf) > 0:
             resultdict = threadit(getfeature, [[p] for p in self.pfds])
-            for n, pfd in resultdict.iteritems():
+            for n, pfd in resultdict.items():
                 self.pfds[n] = pfd
         for f in vargf:
             self.extracted_feature.append(f)
@@ -317,7 +315,7 @@ class dataloader(object):
         """
         self.target = self.orig_target[:]
         self.classmap = classmap
-        for k, v in self.classmap.iteritems():
+        for k, v in self.classmap.items():
             for val in v:
                 self.target[self.orig_target == val] = k
 

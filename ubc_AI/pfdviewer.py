@@ -2664,7 +2664,7 @@ class MainFrameGTK(Gtk.Window):
 
             idx = self.data["fname"] == fname
             newvote = []
-            for k, v in FL_votes.iteritems():
+            for k, v in FL_votes.items():
                 o = self.builder.get_object(v).get_active()
                 value = np.where(o, 1, 0)
                 newvote.append(value)

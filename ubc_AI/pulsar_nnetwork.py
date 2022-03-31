@@ -1230,7 +1230,7 @@ def feature_curve(feature, originaldata, bounds=None, Npts=10, plot=False, pct=0
     pfds = originaldata["pfds"]
     target = originaldata["target"]
     classdict = {0: [4, 5], 1: [6, 7]}
-    for k, v in classdict.iteritems():
+    for k, v in classdict.items():
         for val in v:
             target[target == val] = k
 

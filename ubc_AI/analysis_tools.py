@@ -178,7 +178,7 @@ def cut_performance(
         pct_recovered[k] = []
     psr_hist = {}
     rfi_hist = {}
-    for k, v in AIs.iteritems():
+    for k, v in AIs.items():
         # are we using feature labeling targets and classifiers?
         if features:
             if features[k] in targetmap:
@@ -208,7 +208,7 @@ def cut_performance(
     pcts = []
     for i in range(nbins - 1):
         pcts.append(float(i) / nbins)
-        for k, v in performance.iteritems():
+        for k, v in performance.items():
             A = psr_hist[k]
             B = rfi_hist[k]
             v.append(hist_overlap(A, B, idx=i, norm=norm))
@@ -217,7 +217,7 @@ def cut_performance(
     if plot:
         ax = plt.subplot(211)
         linecycler = cycle(lines)
-        for k, v in performance.iteritems():
+        for k, v in performance.items():
             ax.plot(pcts, v, next(linecycler), label=str(k))
         ax.set_xlabel("pct cut")
         ax.set_ylabel("overlap")
@@ -226,7 +226,7 @@ def cut_performance(
 
         ax = plt.subplot(212)
         linecycler = cycle(lines)
-        for k, v in pct_recovered.iteritems():
+        for k, v in pct_recovered.items():
             ax.plot(pcts, v, next(linecycler), label=str(k))
         ax.set_xlabel("pct cut")
         ax.set_ylabel("pulsar fraction recovered")

@@ -658,7 +658,7 @@ class MetaCNN(BaseEstimator):
             cc = self.__class__
             self.__class__ = oc
             params = self.get_params()
-            for k, v in superparams.iteritems():
+            for k, v in superparams.items():
                 params[k] = v
             self.__class__ = cc
         else:

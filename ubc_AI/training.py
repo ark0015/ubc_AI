@@ -1,7 +1,7 @@
 from ubc_AI.prepfold import pfd
-from samples import downsample, normalize
+from ubc_AI.samples import downsample, normalize
 import numpy as np
-import psr_utils
+from presto import psr_utils
 import matplotlib.pyplot as plt
 
 # from scipy.linalg import svd
@@ -42,7 +42,7 @@ class pfddata(pfd):
             mx = self.profs.sum(0).sum(0).argmax()
             nbin = self.proflen
             # number of bins from
-            noff = nbin / 2 - mx
+            noff = int(nbin / 2 - mx)
             self.profs = np.roll(self.profs, noff, axis=-1)
         if align:
             # ensure downsampled grid falls bin of max(profile)
@@ -650,7 +650,7 @@ def feature_curve(
     orig_target = originaldata["target"]
     classmap = {0: [4, 5], 1: [6, 7]}
     target = orig_target[:]
-    for k, v in classmap.iteritems():
+    for k, v in classmap.items():
         for val in v:
             target[orig_target == val] = k
     if bounds == None:
@@ -705,7 +705,7 @@ class datafitter(object):
             else:
                 self.classmap = classmap
             self.target = self.orig_target[:]
-            for k, v in self.classmap.iteritems():
+            for k, v in self.classmap.items():
                 for val in v:
                     self.target[self.orig_target == val] = k
 
@@ -718,7 +718,7 @@ class datafitter(object):
         """
         self.target = self.orig_target[:]
         self.classmap = classmap
-        for k, v in self.classmap.iteritems():
+        for k, v in self.classmap.items():
             for val in v:
                 self.target[self.orig_target == val] = k
 
