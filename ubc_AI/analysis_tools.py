@@ -13,7 +13,7 @@ colors = ["b", "k", "g", "r"]  # , 'c', 'm', 'k']
 
 
 def hist_overlap(A, B, idx=0, norm=True):
-    """
+    r"""
     given two histograms, determine the overlap:
     Overlap(A,B) = \sum_i( min(A[i], B[i]) )
 

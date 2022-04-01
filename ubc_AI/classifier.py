@@ -1,7 +1,8 @@
-import cPickle
+import pickle
 import numpy.random as random
 from numpy.random import shuffle
 import numpy as np
+
 from sklearn.decomposition import PCA
 from sklearn import svm, linear_model, tree, ensemble
 from sklearn.ensemble import GradientBoostingClassifier as GBC
@@ -83,7 +84,7 @@ class combinedAI(object):
         self.strategy = strategy
         if strategy != "vote" and strategy not in self.AIonAIs:
             note = "strategy %s != recognized" % strategy
-            raise MyError(note)
+            raise NotImplementedError(note)
         if strategy == "lr":
             self.AIonAI = linear_model.LogisticRegression(**kwds)
         elif strategy == "svm":

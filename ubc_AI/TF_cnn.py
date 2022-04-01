@@ -17,6 +17,8 @@ import logging
 import numpy as np
 from collections import OrderedDict
 import datetime
+
+import tensorflow as tf
 """
 from sklearn.base import BaseEstimator
 import theano
@@ -37,7 +39,27 @@ class CNN(object):
     """
     Conformal Neural Network,
     backend by Theano, but compliant with sklearn interface.
+    Parameters
+    ----------
+    n_in : width (or length) of input image (assumed square)
+    n_out : number of class labels
+    activation_funct: optional, str
+        Chooses activation function, defaut 'tanh'
+    nkerns: list of ints
+        number of kernels on each layer
+    filters: list of ints, or 2-tuples
+        width of convolution. If 2-tuples, filter size can be different in x and y direction
+    poolsize: list of 2-tuples
+        maxpooling in convolution layer (index-0),and direction x or y (index-1)
+    n_hidden: int
+        number of hidden neurons
+    output_type: string
+        type of decision 'softmax', 'binary', 'real'
+    batch_size: int
+        number of samples in each training batch. Default 200.
 
+    Notes
+    -----
     This class holds the actual layers, while MetaCNN does
     the fit/predict routines. You should init with MetaCNN.
 
@@ -55,16 +77,14 @@ class CNN(object):
              --> (N, nkerns[1], nx3, ny3) (nx3 = nx2/poolsize[1][0], ny3=ny2/poolsize[1][1])
     layer2 : hidden layer of nkerns[1]*nx3*ny3 input features and n_hidden hidden neurons
     layer3 : final LR layer with n_hidden neural inputs and n_out outputs/classes
-
-
     """
 
     def __init__(
         self,
-        input,
+        input_tensor,
         n_in=1,
         n_out=0,
-        activation=T.tanh,
+        activation_funct='tanh',
         nkerns=[20, 50],
         filters=[15, 9],
         poolsize=[(3, 3), (2, 2)],
@@ -73,50 +93,25 @@ class CNN(object):
         batch_size=25,
         use_symbolic_softmax=False,
     ):
-
-        """
-        n_in : width (or length) of input image (assumed square)
-        n_out : number of class labels
-
-        :type nkerns: list of ints
-        :param nkerns: number of kernels on each layer
-
-        :type filters: list of ints, or 2-tuples
-        :param filters: width of convolution.
-                        if 2-tuples, filter size can be different in x and y direction
-
-        :type poolsize: list of 2-tuples
-        :param poolsize: maxpooling in convolution layer (index-0),
-                         and direction x or y (index-1)
-
-        :type n_hidden: int
-        :param n_hidden: number of hidden neurons
-
-        :type output_type: string
-        :param output_type: type of decision 'softmax', 'binary', 'real'
-
-        :type batch_size: int
-        :param batch_size: number of samples in each training batch. Default 200.
-        """
-        self.activation = activation
+        self.activation = activation_funct
         self.output_type = output_type
 
         # shape of input images
         nx, ny = n_in, n_in
 
+        self.softmax = use_symbolic_softmax
+        """
         if use_symbolic_softmax:
-
-            def symbolic_softmax(x):
-                e = T.exp(x)
-                return e / T.sum(e, axis=1).dimshuffle(0, "x")
-
-            self.softmax = symbolic_softmax
+            e = T.exp(x)
+            return e / T.sum(e, axis=1).dimshuffle(0, "x")
+            self.softmax = e / T.sum(e, axis=1).dimshuffle(0, "x")
         else:
             self.softmax = T.nnet.softmax
+        """
 
         # Reshape matrix of rasterized images of shape (batch_size, nx*ny)
         # to a 4D tensor, compatible with our LeNetConvPoolLayer
-        layer0_input = input.reshape((batch_size, 1, nx, ny))
+        layer0_input = input_tensor.reshape((batch_size, 1, nx, ny))
 
         # Construct the first convolutional pooling layer:
         # filtering reduces the image size to (nx-filx+1,ny-fily+1)
@@ -132,7 +127,7 @@ class CNN(object):
         rng = np.random.RandomState(23455)
         self.layer0 = LeNetConvPoolLayer(
             rng,
-            input=layer0_input,
+            input_layer=layer0_input,
             image_shape=(batch_size, 1, nx, ny),
             filter_shape=(nkerns[0], 1, fil1x, fil1y),
             poolsize=poolsize[0],
@@ -152,7 +147,7 @@ class CNN(object):
             fil2y = nconf[1]
         self.layer1 = LeNetConvPoolLayer(
             rng,
-            input=self.layer0.output,
+            input_layer=self.layer0.output,
             image_shape=(batch_size, nkerns[0], poox, pooy),
             filter_shape=(nkerns[1], nkerns[0], fil2x, fil2y),
             poolsize=poolsize[1],
@@ -168,7 +163,7 @@ class CNN(object):
         poo2y = (pooy - fil2y + 1) / poolsize[1][1]
         self.layer2 = HiddenLayer(
             rng,
-            input=layer2_input,
+            input_layer=layer2_input,
             n_in=nkerns[1] * poo2x * poo2y,
             n_out=n_hidden,
             activation=T.tanh,
@@ -176,7 +171,7 @@ class CNN(object):
 
         # classify the values of the fully-connected sigmoidal layer
         self.layer3 = LogisticRegression(
-            input=self.layer2.output, n_in=n_hidden, n_out=n_out
+            input_layer=self.layer2.output, n_in=n_hidden, n_out=n_out
         )
 
         # CNN regularization
@@ -251,7 +246,7 @@ class CNN(object):
                 # represents a mistake in prediction
                 return T.mean(T.neq(self.y_pred, y))
             else:
-                raise NotImplementedError()
+                raise NotImplementedError
 
 
 class MetaCNN(BaseEstimator):
@@ -303,9 +298,11 @@ class MetaCNN(BaseEstimator):
 
         """
         # input
-        self.x = T.matrix("x")
+        #self.x = T.matrix("x")
+        self.x = tf.variable("x")
         # output (a label)
-        self.y = T.ivector("y")
+        #self.y = T.ivector("y")
+        self.y = tf.variable("y")
 
         if self.activation == "tanh":
             activation = T.tanh
@@ -319,7 +316,7 @@ class MetaCNN(BaseEstimator):
             raise NotImplementedError
 
         self.cnn = CNN(
-            input=self.x,
+            input_tensor=self.x,
             n_in=self.n_in,
             n_out=self.n_out,
             activation=activation,
@@ -750,11 +747,11 @@ class LogisticRegression(object):
     determine a class membership probability.
     """
 
-    def __init__(self, input, n_in, n_out):
+    def __init__(self, input_layer, n_in, n_out):
         """Initialize the parameters of the logistic regression
 
-        :type input: theano.tensor.TensorType
-        :param input: symbolic variable that describes the input of the
+        :type input_layer: theano.tensor.TensorType
+        :param input_layer: symbolic variable that describes the input of the
                       architecture (one minibatch)
 
         :type n_in: int
@@ -778,7 +775,7 @@ class LogisticRegression(object):
         )
 
         # compute vector of class-membership probabilities in symbolic form
-        self.p_y_given_x = T.nnet.softmax(T.dot(input, self.W) + self.b)
+        self.p_y_given_x = T.nnet.softmax(T.dot(input_layer, self.W) + self.b)
 
         # compute prediction as class whose probability is maximal in
         # symbolic form
@@ -852,7 +849,7 @@ class LogisticRegression(object):
 
 
 class HiddenLayer(object):
-    def __init__(self, rng, input, n_in, n_out, W=None, b=None, activation=T.tanh):
+    def __init__(self, rng, input_layer, n_in, n_out, W=None, b=None, activation=T.tanh):
         """
         Typical hidden layer of a MLP: units are fully-connected and have
         sigmoidal activation function. Weight matrix W is of shape (n_in,n_out)
@@ -865,8 +862,8 @@ class HiddenLayer(object):
         :type rng: np.random.RandomState
         :param rng: a random number generator used to initialize weights
 
-        :type input: theano.tensor.dmatrix
-        :param input: a symbolic tensor of shape (n_examples, n_in)
+        :type input_layer: theano.tensor.dmatrix
+        :param input_layer: a symbolic tensor of shape (n_examples, n_in)
 
         :type n_in: int
         :param n_in: dimensionality of input
@@ -878,7 +875,7 @@ class HiddenLayer(object):
         :param activation: Non linearity to be applied in the hidden
                            layer
         """
-        self.input = input
+        self.input_layer = input_layer
 
         # `W` is initialized with `W_values` which is uniformely sampled
         # from sqrt(-6./(n_in+n_hidden)) and sqrt(6./(n_in+n_hidden))
@@ -913,7 +910,7 @@ class HiddenLayer(object):
         self.W = W
         self.b = b
 
-        lin_output = T.dot(input, self.W) + self.b
+        lin_output = T.dot(self.input_layer, self.W) + self.b
         self.output = lin_output if activation is None else activation(lin_output)
         # parameters of the model
         self.params = [self.W, self.b]
@@ -922,15 +919,15 @@ class HiddenLayer(object):
 class LeNetConvPoolLayer(object):
     """Pool Layer of a convolutional network"""
 
-    def __init__(self, rng, input, filter_shape, image_shape, poolsize=(2, 2)):
+    def __init__(self, rng, input_layer, filter_shape, image_shape, poolsize=(2, 2)):
         """
         Allocate a LeNetConvPoolLayer with shared variable internal parameters.
 
         :type rng: np.random.RandomState
         :param rng: a random number generator used to initialize weights
 
-        :type input: theano.tensor.dtensor4
-        :param input: symbolic image tensor, of shape image_shape
+        :type input_layer: theano.tensor.dtensor4
+        :param input_layer: symbolic image tensor, of shape image_shape
 
         :type filter_shape: tuple or list of length 4
         :param filter_shape: (number of filters, num input feature maps,
@@ -946,7 +943,7 @@ class LeNetConvPoolLayer(object):
         """
 
         assert image_shape[1] == filter_shape[1]
-        self.input = input
+        self.input_layer = input_layer
 
         # there are "num input feature maps * filter height * filter width"
         # inputs to each hidden unit
@@ -971,7 +968,7 @@ class LeNetConvPoolLayer(object):
 
         # convolve input feature maps with filters
         conv_out = conv.conv2d(
-            input=input,
+            input_layer=input_layer,
             filters=self.W,
             filter_shape=filter_shape,
             image_shape=image_shape,
@@ -979,7 +976,7 @@ class LeNetConvPoolLayer(object):
 
         # downsample each feature map individually, using maxpooling
         pooled_out = downsample.max_pool_2d(
-            input=conv_out, ds=poolsize, ignore_border=True
+            input_layer=conv_out, ds=poolsize, ignore_border=True
         )
 
         # add the bias term. Since the bias is a vector (1D array), we first

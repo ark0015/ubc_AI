@@ -35,7 +35,7 @@ def gaussfit(data):
 
 
 def PF0_fit(data, harms):
-    """given a distribution of survey F0's, and list of harmonics,
+    r"""given a distribution of survey F0's, and list of harmonics,
     fit the PDF as 'uniform plus \sum_harmonics Normal'
     Return [A]*Nharm
 
