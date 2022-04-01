@@ -2,7 +2,13 @@ import sys, os
 import scipy.stats as stats
 import numpy as np
 import ubc_AI.samples
-
+import pylab
+try:
+    import psrchive
+except:
+    raise ImportError(
+        "Cannot load the psrchive python module make sure you have psrchive installed with the configure --enable-shared option"
+    )
 
 def rotate(data, deltaphase):
     size = data.shape[-1]
@@ -30,12 +36,6 @@ class ar2data(object):
     initialize = False
 
     def __init__(self, filename, align=True, centre=True):
-        try:
-            import psrchive
-        except:
-            raise ImportError(
-                "Cannot load the psrchive python module make sure you have psrchive installed with the configure --enable-shared option"
-            )
         self.filename = filename
         self.archive = psrchive.Archive_load(filename)
         # archive.bscrunch_to_nbin(64)
@@ -204,21 +204,19 @@ class ar2data(object):
 
 
 if __name__ == "__main__":
-    from pylab import *
-
-    ar2file = ar2data("test.ar2", align=True)
+    ar2file = pylab.ar2data("test.ar2", align=True)
 
     data = ar2file.getdata(intervals=64)
-    imshow(data.reshape((64, 64)), aspect="auto")
-    show()
+    pylab.imshow(data.reshape((64, 64)), aspect="auto")
+    pylab.show()
 
     # data = ar2file.getdata(subbands=64)
     # imshow(data.reshape((64,64)), aspect='auto')
     # show()
 
     data = ar2file.getdata(phasebins=32)
-    plot(data, "-")
-    show()
+    pylab.plot(data, "-")
+    pylab.show()
 
     # data = ar2file.getdata(DMbins=16)
     # plot(data, '.')

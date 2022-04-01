@@ -942,8 +942,6 @@ class pfd:
 
 
 if __name__ == "__main__":
-    import sys
-
     # testpfd = "/home/ransom/tmp_pfd/M5_52725_W234_PSR_1518+0204A.pfd"
     # testpfd = "/home/ransom/tmp_pfd/M13_52724_W234_PSR_1641+3627C.pfd"
     testpfd = "M13_53135_W34_rficlean_DM30.10_PSR_1641+3627C.pfd"

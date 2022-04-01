@@ -36,13 +36,17 @@ import pylab as plt
 # next taken from ubc_AI.training and ubc_AI.samples
 from ubc_AI.training import pfddata
 from ubc_AI.data import pfdreader
-from sklearn.decomposition import RandomizedPCA as PCA
 import ubc_AI.known_pulsars as known_pulsars
+from ubc_AI.singlepulse import SPdata
+
+from sklearn.decomposition import RandomizedPCA as PCA
+
+import psrchive
+from ftplib import FTP
 
 # check for ps --> png conversion utilities
 try:
     from PythonMagick import Image
-
     pyimage = True
 except ImportError:
     pyimage = False
@@ -2177,8 +2181,6 @@ class MainFrameGTK(Gtk.Window):
             arch = None
             if fname.endswith(".ar2") or fname.endswith(".ar"):
                 try:
-                    import psrchive
-
                     arch = psrchive.Archive_load(fname)
                     arch.dedisperse()
                     coord = arch.get_coordinates()
@@ -2190,8 +2192,6 @@ class MainFrameGTK(Gtk.Window):
             spd = None
             if fname.endswith(".spd"):
                 try:
-                    from ubc_AI.singlepulse import SPdata
-
                     spd = SPdata(fname)
                     dm = spd.dm
                     ra = spd.ra
@@ -2676,7 +2676,6 @@ class MainFrameGTK(Gtk.Window):
         we download the candidate.
 
         """
-        from ftplib import FTP
 
         # fn_name doesn't seem to be right! look into "def palfa_qry"
         tmp = np.array([i.replace(".png", "") for i in self.qry_results["pngname"]])

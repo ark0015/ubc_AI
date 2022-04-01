@@ -1,9 +1,12 @@
+import cPickle
 import numpy.random as random
+from numpy.random import shuffle
 import numpy as np
-from sklearn.decomposition import RandomizedPCA as PCA
+from sklearn.decomposition import PCA
 from sklearn import svm, linear_model, tree, ensemble
 from sklearn.ensemble import GradientBoostingClassifier as GBC
 
+import ubc_AI
 from ubc_AI.training import split_data
 from ubc_AI import pulsar_nnetwork as pnn
 from ubc_AI import sktheano_cnn as skcnn
@@ -335,9 +338,6 @@ class combinedAI(object):
             pfds = [pfds]
 
         if not self.__dict__.has_key("prior_freq_dist"):
-            import pickle
-            import ubc_AI
-
             ubcAI_path = ubc_AI.__path__[0]
             # Note: we expect a dictionary whose key is 'Pfr_over_Pfp'
             self.prior_freq_dist = pickle.load(open(ubcAI_path + "/" + dist, "rb"))
@@ -511,8 +511,6 @@ class classifier(object):
                 mytarget = exptargets
             results = self.fit(data, mytarget)
         except KeyboardInterrupt as detail:
-            import sys
-
             print(sys.exc_info()[0], detail)
         finally:
             self.__class__ = current_class
@@ -716,8 +714,6 @@ class adaboost(object):
         """
         if self.platt:
             # split the data into training and x-val (for predict_proba fit)
-            from random import shuffle
-
             L = len(targets)
             index = range(L)
             cut = int(0.8 * L)  # 80pct training, 20pct x-val
@@ -799,7 +795,7 @@ class adaboost(object):
             self.platt.fit(this_preds, test_target)
 
     def predict(self, list_of_predictions):
-        """
+        r"""
         apply the adaboost weights and form the final hypothesis
         H(x) = sign( \sum_classifier weight(i) * h_i(x) )
 
@@ -815,7 +811,7 @@ class adaboost(object):
         return np.where(np.dot(tmp, self.weights) >= 0.0, 1, 0)
 
     def predict_proba(self, lops):
-        """
+        r"""
         following arxiv.org/pdf/1207.1403.pdf
 
         *use a Platt calibration (done in 'fit') to provide

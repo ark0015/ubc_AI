@@ -157,8 +157,6 @@ def cut_performance(
     3) dictionary of key=AI, val=% of pulsar recovered at this cut
 
     """
-    import pylab as plt
-    from itertools import cycle
 
     lines = ["--", "-", ":", "-."]
     targetmap = {
@@ -266,9 +264,6 @@ def plot_neuralactivity(
             Default=True
 
     """
-    import pylab as plt
-    from itertools import cycle
-
     lines = ["--", "-", ":", "-."]
 
     theta1 = nn.layers[0].theta  # nfeatures+bias x nneurons

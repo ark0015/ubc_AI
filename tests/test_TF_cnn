@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+import sys
+import glob
+import pickle
+import pytest
+import presto
+
+import ubc_AI
+from ubc_AI.data import pfdreader
+
+testdir = os.path.dirname(os.path.abspath(__file__))
+datadir = os.path.join(testdir, "data")
+
+

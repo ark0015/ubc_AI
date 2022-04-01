@@ -4,10 +4,11 @@
 import os
 import sys
 import glob
+import pickle
 import pytest
-import ubc_AI
-
 import presto
+
+import ubc_AI
 from ubc_AI.data import pfdreader
 
 testdir = os.path.dirname(os.path.abspath(__file__))
@@ -39,3 +40,16 @@ def test_pfdreader():
     # np.savetxt(filename+'.TvP', TvP)
     # np.savetxt(filename+'.FvP', FvP)
     # np.savetxt(filename+'.DMcurve', DMc)
+
+def test_quickclf():
+	trained_ai_path = ('/').join(ubc_AI.__path__[0].split('/')[:-1])+'/data/trained_AI'
+	print(trained_ai_path)
+	
+	with open(trained_ai_path+'/clfl2_PALFA.pkl','rb') as f:
+		classifier = pickle.load(f)
+
+	pfdfiles = glob.glob(datadir + '*.pfd')
+	AI_scores = classifier.report_score([pfdreader(f) for f in pfdfile])
+	for i,pfdfile in enumerate(pfdfiles):
+		print(pfdfile,"Score:",AI_scores[i])
+

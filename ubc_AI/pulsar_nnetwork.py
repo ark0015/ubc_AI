@@ -7,6 +7,7 @@ optimizations for large data sets
 
 """
 import numpy as np
+from random import shuffle
 import pickle
 import pylab as plt
 from scipy import io
@@ -14,6 +15,8 @@ from scipy import mgrid
 from scipy.optimize import fmin_cg
 import sys
 from sklearn.base import BaseEstimator
+
+from copy import deepcopy
 
 # Aaron's fortran-optimized openmp code
 try:
@@ -943,8 +946,6 @@ class NeuralNetwork(BaseEstimator):
 
         * useful for testing gradient routine *
         """
-        from copy import deepcopy
-
         thetas = self.flatten_thetas()
         origthetas = deepcopy(thetas)
         numgrad = np.zeros(thetas.size)
@@ -1339,8 +1340,6 @@ def split_data(data, target, pct=0.6):
     training_data, training_target, test_data, test_target
 
     """
-    from random import shuffle
-
     if isinstance(data, type([])):
         data = np.array(data)
 

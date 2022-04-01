@@ -1,12 +1,16 @@
-from ubc_AI.prepfold import pfd
-from ubc_AI.samples import downsample, normalize
+import pickle
 import numpy as np
-from presto import psr_utils
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
+from random import shuffle
+from scipy import mgrid
 # from scipy.linalg import svd
 # from pylab import *
 
+from ubc_AI.prepfold import pfd
+from ubc_AI.samples import downsample, normalize
+
+from presto import psr_utils
 
 class pfddata(pfd):
     initialized = False
@@ -260,10 +264,6 @@ class pfddata(pfd):
             )
         )
         return data
-
-
-from random import shuffle
-
 
 class cross_validation(object):
     @classmethod
@@ -574,8 +574,6 @@ def split_data(data, target, pct=0.6):
     training_data, training_target, test_data, test_target
 
     """
-    from random import shuffle
-
     if isinstance(data, type([])):
         data = np.array(data)
 
@@ -597,10 +595,6 @@ def split_data(data, target, pct=0.6):
             break
 
     return training_data, training_target, test_data, test_target
-
-
-from scipy import mgrid
-
 
 def feature_curve(
     classifier, feature, originaldata, bounds=None, Npts=10, plot=False, pct=0.4
@@ -679,10 +673,6 @@ def feature_curve(
         plt.legend()
         plt.show()
     return train_score, test_score, vals, vals[test_score.argmin()]
-
-
-import pickle
-
 
 class datafitter(object):
     """

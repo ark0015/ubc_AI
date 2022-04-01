@@ -11,7 +11,7 @@ import numpy as np
 import re
 import urllib
 
-# from BeautifulSoup import BeautifulSoup
+from BeautifulSoup import BeautifulSoup
 
 
 def get_allpulsars():
@@ -88,8 +88,6 @@ def GBNCC_pulsarlist():
     pulsars = {}
     url = "http://arcc.phys.utb.edu/gbncc/"
     try:
-        from BeautifulSoup import BeautifulSoup
-
         sock = urllib.urlopen(url)
         data = sock.read()
         soup = BeautifulSoup(data)
@@ -184,8 +182,6 @@ def PALFA_pulsarlist():
     pulsars = {}
     url = "http://www.naic.edu/~palfa/newpulsars/"
     try:
-        from BeautifulSoup import BeautifulSoup
-
         sock = urllib.urlopen(url)
         data = sock.read()
         soup = BeautifulSoup(data)
@@ -265,8 +261,6 @@ def PALFA_jodrell_extrainfo():
     pulsars = {}
     url = "http://www.jodrellbank.manchester.ac.uk/research/pulsar/PALFA/"
     try:
-        from BeautifulSoup import BeautifulSoup
-
         sock = urllib.urlopen(url)
         data = sock.read()
         soup = BeautifulSoup(data)
@@ -290,8 +284,6 @@ def driftscan_pulsarlist():
     # moved url = 'http://www.as.wvu.edu/~pulsar/GBTdrift350/'
     url = "http://astro.phys.wvu.edu/GBTdrift350/"
     try:
-        from BeautifulSoup import BeautifulSoup
-
         sock = urllib.urlopen(url)
         data = sock.read()
         soup = BeautifulSoup(data)
@@ -350,8 +342,6 @@ def ao327_pulsarlist():
     pulsars = {}
     url = "http://www.naic.edu/~deneva/drift-search/"
     try:
-        from BeautifulSoup import BeautifulSoup
-
         sock = urllib.urlopen(url)
         data = sock.read()
         soup = BeautifulSoup(data)
@@ -410,8 +400,6 @@ def deepmb_pulsarlist():
     pulsars = {}
     url = "http://astro.phys.wvu.edu/dmb/"
     try:
-        from BeautifulSoup import BeautifulSoup
-
         sock = urllib.urlopen(url)
         data = sock.read()
         soup = BeautifulSoup(data)

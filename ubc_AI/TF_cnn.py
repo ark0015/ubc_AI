@@ -12,14 +12,13 @@ tips/tricks/notes:
 * if training set is large (>O(100)) and redundant, use stochastic gradient descent (batch_size=1), otherwise use conjugate descent (batch_size > 1)
 *  
 """
-import pickle as pickle
+import pickle
 import logging
 import numpy as np
 from collections import OrderedDict
 import datetime
-
+"""
 from sklearn.base import BaseEstimator
-
 import theano
 import theano.tensor as T
 from theano.tensor.signal import downsample
@@ -32,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 mode = theano.Mode(linker="cvm")
 # mode = 'DEBUG_MODE'
-
+"""
 
 class CNN(object):
     """
@@ -713,7 +712,6 @@ class MetaCNN(BaseEstimator):
 
     def save(self, fpath=".", fname=None):
         """Save a pickled representation of Model state."""
-
         fpathstart, fpathext = os.path.splitext(fpath)
         if fpathext == ".pkl":
             # User supplied an absolute path to a pickle file

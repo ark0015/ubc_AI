@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 from ubc_AI.prepfold import pfd
 import numpy as np
-from pylab import *
-import matplotlib.pyplot as plt
-from scipy.interpolate import RectBivariateSpline as interp
-from scipy import ndimage, array, ogrid, mgrid
+import scipy
 import sys, os
 
 
@@ -27,11 +24,11 @@ if __name__ == "__main__":
     var = np.std(data)
     data = (data - mean) / var
     profs = data.reshape(pshape)
-    X, Y, Z = ogrid[0:1:x, 0:1:y, 0:1:z]
-    coords = array([X, Y, Z])
-    coeffs = ndimage.spline_filter(profs)
-    X, Y, Z = mgrid[0:1:8j, 0:1:8j, 0:1:8j]
-    coords = array([X, Y, Z])
-    newf = ndimage.map_coordinates(coeffs, coords, prefilter=False)
+    X, Y, Z = scipy.ogrid[0:1:x, 0:1:y, 0:1:z]
+    coords = scipy.array([X, Y, Z])
+    coeffs = scipy.ndimage.spline_filter(profs)
+    X, Y, Z = scipy.mgrid[0:1:8j, 0:1:8j, 0:1:8j]
+    coords = scipy.array([X, Y, Z])
+    newf = scipy.ndimage.map_coordinates(coeffs, coords, prefilter=False)
 
     np.save(f2, newf)

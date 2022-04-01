@@ -2,7 +2,12 @@ import numpy as np
 import os, glob
 
 # import sklearn.preprocessing as PPC
+from scipy.interpolate import RectBivariateSpline as interp2d
+from scipy import ndimage, array, ogrid, mgrid
 
+from ubc_AI.prepfold import pfd
+
+SAMPLE_FILES_DIR = "/data/pulse-learning/Erik/"
 
 def normalize(data):
     """data:input array of 1-3 dimentions
@@ -38,11 +43,6 @@ def normalize(data):
                 data = data - mean
             # data = data.reshape(shape)
         return data
-
-
-from scipy.interpolate import RectBivariateSpline as interp2d
-from scipy import ndimage, array, ogrid, mgrid
-
 
 def downsample(a, n, align=0):
     """a: input array of 1-3 dimentions
@@ -117,13 +117,6 @@ def downsample(a, n, align=0):
             newf = ndimage.map_coordinates(coeffs, coords, prefilter=False)
             # newf = ndimage.map_coordinates(coeffs, coords )
             return newf
-
-
-import glob
-from ubc_AI.prepfold import pfd
-
-SAMPLE_FILES_DIR = "/data/pulse-learning/Erik/"
-
 
 def load_pfds(dir=SAMPLE_FILES_DIR):
     SAMPLE_FILES = glob.glob(dir + "*.pfd")
