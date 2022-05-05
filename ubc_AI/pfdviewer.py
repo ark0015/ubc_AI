@@ -47,6 +47,7 @@ from ftplib import FTP
 # check for ps --> png conversion utilities
 try:
     from PythonMagick import Image
+
     pyimage = True
 except ImportError:
     pyimage = False

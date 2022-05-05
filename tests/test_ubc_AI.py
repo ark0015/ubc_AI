@@ -10,6 +10,7 @@ import presto
 
 import ubc_AI
 from ubc_AI.data import pfdreader
+from ubc_AI import known_pulsars
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 datadir = os.path.join(testdir, "data")
@@ -41,15 +42,21 @@ def test_pfdreader():
     # np.savetxt(filename+'.FvP', FvP)
     # np.savetxt(filename+'.DMcurve', DMc)
 
+
+def test_known_pulsars():
+    known_pulsars.get_allpulsars()
+
+
+"""
 def test_quickclf():
-	trained_ai_path = ('/').join(ubc_AI.__path__[0].split('/')[:-1])+'/data/trained_AI'
-	print(trained_ai_path)
-	
-	with open(trained_ai_path+'/clfl2_PALFA.pkl','rb') as f:
-		classifier = pickle.load(f)
+    trained_ai_path = ('/').join(ubc_AI.__path__[0].split('/')[:-1])+'/data/trained_AI'
+    print(trained_ai_path)
+    
+    with open(trained_ai_path+'/clfl2_PALFA.pkl','rb') as f:
+        classifier = pickle.load(f)
 
-	pfdfiles = glob.glob(datadir + '*.pfd')
-	AI_scores = classifier.report_score([pfdreader(f) for f in pfdfile])
-	for i,pfdfile in enumerate(pfdfiles):
-		print(pfdfile,"Score:",AI_scores[i])
-
+    pfdfiles = glob.glob(datadir + '*.pfd')
+    AI_scores = classifier.report_score([pfdreader(f) for f in pfdfile])
+    for i,pfdfile in enumerate(pfdfiles):
+        print(pfdfile,"Score:",AI_scores[i])
+"""

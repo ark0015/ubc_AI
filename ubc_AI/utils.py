@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def fromfile(file, dtype, count, *args, **kwargs):
     """Wrapper around np.fromfile to support any file-like object"""
 

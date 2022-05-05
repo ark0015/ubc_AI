@@ -1,21 +1,24 @@
-from ubc_AI.threadit import threadit
-
-# threadit.func_defaults[0]['state'] = True
-from ubc_AI.training import pfddata
+import numpy as np
+import time
+import pickle
+import copy
 
 from sklearn.pipeline import Pipeline
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import classification_report
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
+
+from ubc_AI.threadit import threadit
+
+# threadit.func_defaults[0]['state'] = True
+from ubc_AI.training import pfddata
+
 import ubc_AI.pulsar_nnetwork as pnn
 import ubc_AI.training
 from ubc_AI.data import dataloader
 import ubc_AI.classifier as CLF
-import numpy as np
-import time
-import pickle
-import copy
+
 from ubc_AI.data import singleclass_score
 
 

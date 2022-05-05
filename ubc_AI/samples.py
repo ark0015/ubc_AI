@@ -9,6 +9,7 @@ from ubc_AI.prepfold import pfd
 
 SAMPLE_FILES_DIR = "/data/pulse-learning/Erik/"
 
+
 def normalize(data):
     """data:input array of 1-3 dimentions
     to be normalized.
@@ -43,6 +44,7 @@ def normalize(data):
                 data = data - mean
             # data = data.reshape(shape)
         return data
+
 
 def downsample(a, n, align=0):
     """a: input array of 1-3 dimentions
@@ -117,6 +119,7 @@ def downsample(a, n, align=0):
             newf = ndimage.map_coordinates(coeffs, coords, prefilter=False)
             # newf = ndimage.map_coordinates(coeffs, coords )
             return newf
+
 
 def load_pfds(dir=SAMPLE_FILES_DIR):
     SAMPLE_FILES = glob.glob(dir + "*.pfd")

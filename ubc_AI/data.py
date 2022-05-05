@@ -13,6 +13,7 @@ from ubc_AI.singlepulse import singlepulse
 from ubc_AI.singlepulse import SPdata
 from ubc_AI.threadit import threadit
 
+
 class pfdreader(object):
     """
     A new pfd reader class that only store the link to the file and the extracted data.
@@ -506,9 +507,9 @@ class dataloader(object):
             clf.fit(self.train_pfds, self.train_target)
 
         if feature == None:
-            self.kwds = {"intervals": 32}
+            self.kwargs = {"intervals": 32}
         else:
-            self.kwds = feature
+            self.kwargs = feature
 
         pdts = clf.predict(self.test_pfds)
         truepulsar = set([])
@@ -545,7 +546,7 @@ class dataloader(object):
         else:
             what = list(miss)
 
-        test_data = [pf.getdata(**self.kwds) for pf in self.test_pfds]
+        test_data = [pf.getdata(**self.kwargs) for pf in self.test_pfds]
 
         if plot:
             plt.figure(figsize=(8, 8))
@@ -564,11 +565,13 @@ class dataloader(object):
                         feature = [
                             k
                             for k in sorted(
-                                self.kwds, key=lambda x: self.kwds.get(x), reverse=True
+                                self.kwargs,
+                                key=lambda x: self.kwargs.get(x),
+                                reverse=True,
                             )
                         ][0]
                         if feature in ["intervals", "subbands"]:
-                            N = self.kwds[feature]
+                            N = self.kwargs[feature]
                             ax.imshow(test_data[what[i]].reshape(N, N))
                         else:
                             ax.plot(test_data[what[i]])
@@ -592,15 +595,15 @@ class dataloader(object):
         feature: the feature to extract, default is {'intervals':32}
         """
         if feature == None:
-            self.kwds = {"intervals": 32}
+            self.kwargs = {"intervals": 32}
         else:
-            self.kwds = feature
+            self.kwargs = feature
         if isinstance(sample_list, type(set([]))):
             sample_list = list(sample_list)
         if testonly:
-            test_data = [pf.getdata(**self.kwds) for pf in self.test_pfds]
+            test_data = [pf.getdata(**self.kwargs) for pf in self.test_pfds]
         else:
-            test_data = [pf.getdata(**self.kwds) for pf in self.pfds]
+            test_data = [pf.getdata(**self.kwargs) for pf in self.pfds]
 
         plt.figure(figsize=(8, 8))
         axisNum = 0
@@ -617,11 +620,11 @@ class dataloader(object):
                     feature = [
                         k
                         for k in sorted(
-                            self.kwds, key=lambda x: self.kwds.get(x), reverse=True
+                            self.kwargs, key=lambda x: self.kwargs.get(x), reverse=True
                         )
                     ][0]
                     if feature in ["intervals", "subbands"]:
-                        N = self.kwds[feature]
+                        N = self.kwargs[feature]
                         ax.imshow(
                             test_data[sample_list[i]].reshape(N, N),
                             cmap=plt.get_cmap("binary"),

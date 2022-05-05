@@ -10,7 +10,7 @@ from sklearn.ensemble import GradientBoostingClassifier as GBC
 import ubc_AI
 from ubc_AI.training import split_data
 from ubc_AI import pulsar_nnetwork as pnn
-from ubc_AI import sktheano_cnn as skcnn
+from ubc_AI import TF_cnn as tfcnn
 
 # multiprocess only works in non-interactive mode:
 from ubc_AI.threadit import threadit
@@ -36,7 +36,7 @@ class combinedAI(object):
     """
 
     def __init__(
-        self, list_of_AIs, strategy="lr", nvote=None, score_mapper=equaleval, **kwds
+        self, list_of_AIs, strategy="lr", nvote=None, score_mapper=equaleval, **kwargs
     ):
         """
         inputs
@@ -86,28 +86,28 @@ class combinedAI(object):
             note = "strategy %s != recognized" % strategy
             raise NotImplementedError(note)
         if strategy == "lr":
-            self.AIonAI = linear_model.LogisticRegression(**kwds)
+            self.AIonAI = linear_model.LogisticRegression(**kwargs)
         elif strategy == "svm":
-            self.AIonAI = svm.SVC(probability=True, **kwds)
+            self.AIonAI = svm.SVC(probability=True, **kwargs)
         elif strategy == "forest":
             nleafs = len(list_of_AIs) / 2
-            self.AIonAI = ensemble.RandomForestClassifier(**kwds)
+            self.AIonAI = ensemble.RandomForestClassifier(**kwargs)
         elif strategy == "tree":
             nleafs = len(list_of_AIs) / 2
-            self.AIonAI = tree.DecisionTreeClassifier(min_samples_leaf=nleafs, **kwds)
+            self.AIonAI = tree.DecisionTreeClassifier(min_samples_leaf=nleafs, **kwargs)
         elif strategy == "nn":
-            if "design" in kwds:
-                self.AIonAI = pnn.NeuralNetwork(**kwds)
+            if "design" in kwargs:
+                self.AIonAI = pnn.NeuralNetwork(**kwargs)
             else:
                 n = max(1, int(len(list_of_AIs) / 2))
-                self.AIonAI = pnn.NeuralNetwork(design=[n, 2], **kwds)
+                self.AIonAI = pnn.NeuralNetwork(design=[n, 2], **kwargs)
         elif strategy == "vote":
             assert (nvote > 0) & (nvote <= len(self.list_of_AIs))
             self.nvote = nvote
         elif strategy == "adaboost":
-            self.AIonAI = adaboost(**kwds)
+            self.AIonAI = adaboost(**kwargs)
         elif strategy == "gbc":
-            self.AIonAI = GBC(**kwds)
+            self.AIonAI = GBC(**kwargs)
         elif strategy == "kitchensink":
             lr = linear_model.LogisticRegression(C=0.5, penalty="l1")
             nn = pnn.NeuralNetwork(
@@ -126,7 +126,7 @@ class combinedAI(object):
 
         # initialize a feature list
 
-    def fit(self, pfds, target, **kwds):
+    def fit(self, pfds, target, **kwargs):
         """
         args: [list of pfd instances], target
 
@@ -147,12 +147,12 @@ class combinedAI(object):
         for n, clf in enumerate(self.list_of_AIs):
             tr_pfds, tr_target, te_pfds, te_target = split_data(pfds, target, pct=0.75)
             if InteractivePy:
-                clf.fit(tr_pfds, tr_target, **kwds)
+                clf.fit(tr_pfds, tr_target, **kwargs)
             else:
-                input_data.append([clf, tr_pfds, tr_target, kwds])
+                input_data.append([clf, tr_pfds, tr_target, kwargs])
 
-        def threadfit(clf, tr_pfds, tr_target, kwds):
-            clf.fit(tr_pfds, tr_target, **kwds)
+        def threadfit(clf, tr_pfds, tr_target, kwargs):
+            clf.fit(tr_pfds, tr_target, **kwargs)
             return clf
 
         if not InteractivePy:
@@ -431,13 +431,13 @@ class classifier(object):
         "subbands": 4,
     }
 
-    def __init__(self, feature=None, use_pca=False, n_comp=12, **kwds):
+    def __init__(self, feature=None, use_pca=False, n_comp=12, **kwargs):
         if feature == None:
             raise MyError(None)
         self.feature = feature
         self.use_pca = use_pca
         self.n_components = n_comp
-        super(classifier, self).__init__(**kwds)
+        super(classifier, self).__init__(**kwargs)
 
     def fit(self, pfds, target, randomshift=False):
         """
@@ -662,12 +662,12 @@ class ranforclf(classifier, ensemble.RandomForestClassifier):
     pass
 
 
-class cnnclf(classifier, skcnn.MetaCNN):
+class cnnclf(classifier, tfcnn.CNN):
     """
     the mixed in class for a convolutional neural network
     """
 
-    orig_class = skcnn.MetaCNN
+    orig_class = tfcnn.CNN
     pass
 
 

@@ -3,12 +3,14 @@ import scipy.stats as stats
 import numpy as np
 import ubc_AI.samples
 import pylab
+
 try:
     import psrchive
 except:
     raise ImportError(
         "Cannot load the psrchive python module make sure you have psrchive installed with the configure --enable-shared option"
     )
+
 
 def rotate(data, deltaphase):
     size = data.shape[-1]
