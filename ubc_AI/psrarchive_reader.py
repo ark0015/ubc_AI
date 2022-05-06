@@ -109,117 +109,97 @@ class ar2data(object):
         normalize = ubc_AI.samples.normalize
         downsample = ubc_AI.samples.downsample
 
-        def getsumprofs(M):
-            feature = "%s:%s" % ("phasebins", M)
-            if M == 0:
-                return np.array([])
-            prof = normalize(data).sum(0).sum(0)
-            result = normalize(downsample(prof, M, align=self.align).ravel())
-            self.extracted_feature[feature] = np.array(result)
-            return self.extracted_feature[feature]
-
-        def getfreqprofs(M):
-            feature = "%s:%s" % ("freqbins", M)
-            if M == 0:
-                return np.array([])
-            prof = normalize(data).sum(0).sum(1)
-            result = normalize(downsample(data, M, align=self.align).ravel())
-            self.extracted_feature[feature] = np.array(result)
-            return self.extracted_feature[feature]
-
-        def gettimeprofs(M):
-            feature = "%s:%s" % ("timebins", M)
-            if M == 0:
-                return np.array([])
-            prof = normalize(data).sum(1).sum(1)
-            result = normalize(downsample(data, M, align=self.align).ravel())
-            self.extracted_feature[feature] = np.array(result)
-            return self.extracted_feature[feature]
-
-        def getbandpass(M):
-            feature = "%s:%s" % ("bandpass", M)
-            if M == 0:
-                return np.array([])
-            prof = normalize(data).sum(0).sum(1)
-            result = normalize(downsample(data, M, align=self.align).ravel())
-            self.extracted_feature[feature] = np.array(result)
-            return self.extracted_feature[feature]
-
-        def getDMcurve(M):
-            feature = "%s:%s" % ("DMbins", M)
-            if M == 0:
-                return np.array([])
-            chisqs = calDMcurve(
-                self.data.sum(0), self.dms - self.dm, self.freqs, self.period
-            )
-            result = normalize(downsample(chisqs, M).ravel())
-            self.extracted_feature[feature] = np.array(result)
-            return self.extracted_feature[feature]
-
-        def getintervals(M):
-            feature = "%s:%s" % ("intervals", M)
-            if M == 0:
-                return np.array([])
-            img = greyscale(data.sum(1))
-            result = downsample(normalize(img), M, align=self.align).ravel()
-            self.extracted_feature[feature] = np.array(result)
-            return self.extracted_feature[feature]
-
-        def getsubbands(M):
-            feature = "%s:%s" % ("subbands", M)
-            if M == 0:
-                return np.array([])
-            img = greyscale(data.sum(0))
-            result = downsample(normalize(img), M, align=self.align).ravel()
-            self.extracted_feature[feature] = np.array(result)
-            return self.extracted_feature[feature]
-
-        def getratings(L):
-            feature = "%s:%s" % ("ratings", L)
-            if L == None:
-                return np.array([])
-            if not feature in self.extracted_feature:
-                result = []
-                for rating in L:
-                    if rating == "period":
-                        result.append(self.period)
-                    elif rating == "dm":
-                        result.append(self.dm)
-                    else:
-                        result.append(self.__dict__[rating])
-                self.extracted_feature[feature] = np.array(result)
-            return self.extracted_feature[feature]
-
         data = np.hstack(
             (
-                getsumprofs(phasebins),
-                getfreqprofs(freqbins),
-                gettimeprofs(timebins),
-                getbandpass(bandpass),
-                getDMcurve(DMbins),
-                getintervals(intervals),
-                getsubbands(subbands),
-                getratings(ratings),
+                self.getsumprofs(phasebins),
+                self.getfreqprofs(freqbins),
+                self.gettimeprofs(timebins),
+                self.getbandpass(bandpass),
+                self.getDMcurve(DMbins),
+                self.getintervals(intervals),
+                self.getsubbands(subbands),
+                self.getratings(ratings),
             )
         )
         return data
 
+    def getsumprofs(self,M):
+        feature = "%s:%s" % ("phasebins", M)
+        if M == 0:
+            return np.array([])
+        prof = normalize(data).sum(0).sum(0)
+        result = normalize(downsample(prof, M, align=self.align).ravel())
+        self.extracted_feature[feature] = np.array(result)
+        return self.extracted_feature[feature]
 
-if __name__ == "__main__":
-    ar2file = pylab.ar2data("test.ar2", align=True)
+    def getfreqprofs(self,M):
+        feature = "%s:%s" % ("freqbins", M)
+        if M == 0:
+            return np.array([])
+        prof = normalize(data).sum(0).sum(1)
+        result = normalize(downsample(data, M, align=self.align).ravel())
+        self.extracted_feature[feature] = np.array(result)
+        return self.extracted_feature[feature]
 
-    data = ar2file.getdata(intervals=64)
-    pylab.imshow(data.reshape((64, 64)), aspect="auto")
-    pylab.show()
+    def gettimeprofs(self,M):
+        feature = "%s:%s" % ("timebins", M)
+        if M == 0:
+            return np.array([])
+        prof = normalize(data).sum(1).sum(1)
+        result = normalize(downsample(data, M, align=self.align).ravel())
+        self.extracted_feature[feature] = np.array(result)
+        return self.extracted_feature[feature]
 
-    # data = ar2file.getdata(subbands=64)
-    # imshow(data.reshape((64,64)), aspect='auto')
-    # show()
+    def getbandpass(self,M):
+        feature = "%s:%s" % ("bandpass", M)
+        if M == 0:
+            return np.array([])
+        prof = normalize(data).sum(0).sum(1)
+        result = normalize(downsample(data, M, align=self.align).ravel())
+        self.extracted_feature[feature] = np.array(result)
+        return self.extracted_feature[feature]
 
-    data = ar2file.getdata(phasebins=32)
-    pylab.plot(data, "-")
-    pylab.show()
+    def getDMcurve(self,M):
+        feature = "%s:%s" % ("DMbins", M)
+        if M == 0:
+            return np.array([])
+        chisqs = calDMcurve(
+            self.data.sum(0), self.dms - self.dm, self.freqs, self.period
+        )
+        result = normalize(downsample(chisqs, M).ravel())
+        self.extracted_feature[feature] = np.array(result)
+        return self.extracted_feature[feature]
 
-    # data = ar2file.getdata(DMbins=16)
-    # plot(data, '.')
-    # show()
+    def getintervals(self,M):
+        feature = "%s:%s" % ("intervals", M)
+        if M == 0:
+            return np.array([])
+        img = greyscale(data.sum(1))
+        result = downsample(normalize(img), M, align=self.align).ravel()
+        self.extracted_feature[feature] = np.array(result)
+        return self.extracted_feature[feature]
+
+    def getsubbands(self,M):
+        feature = "%s:%s" % ("subbands", M)
+        if M == 0:
+            return np.array([])
+        img = greyscale(data.sum(0))
+        result = downsample(normalize(img), M, align=self.align).ravel()
+        self.extracted_feature[feature] = np.array(result)
+        return self.extracted_feature[feature]
+
+    def getratings(self,L):
+        feature = "%s:%s" % ("ratings", L)
+        if L == None:
+            return np.array([])
+        if not feature in self.extracted_feature:
+            result = []
+            for rating in L:
+                if rating == "period":
+                    result.append(self.period)
+                elif rating == "dm":
+                    result.append(self.dm)
+                else:
+                    result.append(self.__dict__[rating])
+            self.extracted_feature[feature] = np.array(result)
+        return self.extracted_feature[feature]

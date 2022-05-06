@@ -1,12 +1,35 @@
 import numpy as np
 import sys
 import struct
+import copy
+import random
 
-# import copy, random, struct, sys
-from presto import psr_utils  # , infodata, polycos, Pgplot
+from presto import psr_utils  # , infodata, polycos, 
+from presto import Pgplot
 from presto.bestprof import bestprof
-from ubc_AI.utils import fromfile
 
+def fromfile(file, dtype, count, *args, **kwargs):
+    """Wrapper around np.fromfile to support any file-like object"""
+
+    #    try:
+    #        return np.fromfile(file, dtype=dtype, count=count, *args, **kwargs)
+    #    except (TypeError, IOError, UnsupportedOperation):
+    #        return np.frombuffer(
+    #            file.read(int(count * np.dtype(dtype).itemsize)),
+    #            dtype=dtype, count=count, *args, **kwargs)
+    #    """Read from any file-like object into a numpy array"""
+
+    itemsize = np.dtype(dtype).itemsize
+    buffer = np.zeros(count * itemsize, np.uint8)
+    bytes_read = -1
+    offset = 0
+    while bytes_read != 0:
+        bytes_read = file.readinto(buffer[offset:])
+        offset += bytes_read
+    rounded_bytes = (offset // itemsize) * itemsize
+    buffer = buffer[:rounded_bytes]
+    buffer.dtype = dtype
+    return buffer
 
 class pfd:
     def __init__(self, filename,**kwargs):
@@ -595,16 +618,17 @@ class pfd:
         self.avgprof = (self.profs / self.proflen).sum()
         self.varprof = self.calc_varprof()
 
-    def plot_sumprof(self, device="/xwin"):
+    def plot_sumprof(self, device="/xserve"):
         """
         plot_sumprof(self, device='/xwin'):
             Plot the dedispersed and summed profile.
         """
-        if not self.__dict__.has_key("subdelays"):
+        if "subdelays" not in self.__dict__.keys():
             print("Dedispersing first...")
             self.dedisperse()
         normprof = self.sumprof - min(self.sumprof)
         normprof /= max(normprof)
+        print(normprof)
         Pgplot.plotxy(
             normprof, labx="Phase Bins", laby="Normalized Flux", device=device
         )
@@ -629,7 +653,7 @@ class pfd:
                 by the phasebins option if it is a tuple (low,high)
                 instead of the string 'All'.
         """
-        if not self.__dict__.has_key("subdelays"):
+        if "subdelays" not in self.__dict__.keys():
             print("Dedispersing first...")
             self.dedisperse()
         if phasebins != "All":
@@ -659,7 +683,7 @@ class pfd:
                 by the phasebins option if it is a tuple (low,high)
                 instead of the string 'All'.
         """
-        if not self.__dict__.has_key("subdelays"):
+        if "subdelays" not in self.__dict__.keys():
             print("Dedispersing first...")
             self.dedisperse()
         if phasebins != "All":
@@ -820,7 +844,7 @@ class pfd:
                                 If shiftsubs != False, then actually correct the subbands
                                 instead of a 2D projection of them.
         """
-        if not self.__dict__.has_key("subdelays"):
+        if "subdelays" not in self.__dict__.keys():
             print("Dedispersing first...")
             self.dedisperse()
         if shiftsubs:
@@ -870,7 +894,7 @@ class pfd:
         numon = len(onbins)
         numoff = len(offbins)
         # De-disperse if required first
-        if not self.__dict__.has_key("subdelays"):
+        if "subdelays" not in self.__dict__.keys():
             print("Dedispersing first...")
             self.dedisperse()
         # The following is the average offpulse level
@@ -1193,47 +1217,3 @@ class pfddata(pfd):
                     result.append(self.__dict__[rating])
             self.extracted_feature[feature] = np.array(result)
         return self.extracted_feature[feature]
-
-
-if __name__ == "__main__":
-    # testpfd = "/home/ransom/tmp_pfd/M5_52725_W234_PSR_1518+0204A.pfd"
-    # testpfd = "/home/ransom/tmp_pfd/M13_52724_W234_PSR_1641+3627C.pfd"
-    testpfd = "M13_53135_W34_rficlean_DM30.10_PSR_1641+3627C.pfd"
-
-    tp = pfd(testpfd)
-
-    # if (0):
-    print(tp.start_secs)
-    print(tp.mid_secs)
-    print(tp.start_topo_MJDs)
-    print(tp.mid_topo_MJDs)
-    print(tp.T)
-
-    # tp.kill_subbands([6,7,8,9,30,31,32,33])
-    # tp.kill_intervals([2,3,4,5,6])
-
-    # tp.plot_chi2_vs_sub()
-    # (chis, DMs) = tp.plot_chi2_vs_DM(0.0, 50.0, 501, interp=1)
-    # best_index = np.argmax(chis)
-    # print("Best DM = ", DMs[best_index]
-
-    (chis, DMs) = tp.plot_chi2_vs_DM(0.0, 50.0, 501)
-    best_index = np.argmax(chis)
-    print("Best DM = ", DMs[best_index])
-
-    tp.dedisperse()
-    tp.plot_subbands()
-    tp.plot_sumprof()
-    print("DM =", tp.bestdm, "gives reduced chi^2 =", tp.calc_redchi2())
-
-    tp.dedisperse(27.0)
-    tp.plot_subbands()
-    tp.plot_sumprof()
-    print("DM = 27.0 gives reduced chi^2 =", tp.calc_redchi2())
-
-    tp.dedisperse(33.0)
-    tp.plot_subbands()
-    tp.plot_sumprof()
-    print("DM = 33.0 gives reduced chi^2 =", tp.calc_redchi2())
-
-    tp.plot_intervals()
