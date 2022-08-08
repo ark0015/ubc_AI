@@ -1,6 +1,6 @@
 """
 Aaron Berndsen:
-A Conformal Neural Network using Theano for computation and structure, 
+A Conformal Neural Network using Theano for computation and structure,
 but built to obey sklearn's basic 'fit' 'predict' functionality
 
 *code largely motivated from deeplearning.net examples
@@ -10,21 +10,20 @@ You'll require theano and libblas-dev
 
 tips/tricks/notes:
 * if training set is large (>O(100)) and redundant, use stochastic gradient descent (batch_size=1), otherwise use conjugate descent (batch_size > 1)
-*  
+*
 """
-import pickle as pickle
-import logging
-import numpy as np
-from collections import OrderedDict
 import datetime
+import logging
+import os
+import pickle as pickle
+from collections import OrderedDict
 
-from sklearn.base import BaseEstimator
-
+import numpy as np
 import theano
 import theano.tensor as T
-from theano.tensor.signal import downsample
+from sklearn.base import BaseEstimator
 from theano.tensor.nnet import conv
-import logging
+from theano.tensor.signal import downsample
 
 _logger = logging.getLogger("theano.gof.compilelock")
 _logger.setLevel(logging.WARN)
@@ -277,8 +276,8 @@ class MetaCNN(BaseEstimator):
         L1_reg=0.00,
         L2_reg=0.00,
         use_symbolic_softmax=False,
-        ### Note, n_in and n_out are actually set in
-        ### .fit, they are here to help pickle
+        # Note, n_in and n_out are actually set in
+        # .fit, they are here to help pickle
         n_in=50,
         n_out=2,
     ):
@@ -503,22 +502,22 @@ class MetaCNN(BaseEstimator):
 
         while (epoch < n_epochs) and (not done_looping):
             epoch = epoch + 1
-            for idx in xrange(n_train_batches):
+            for idx in np.shape(n_train_batches)[0]:
 
                 iter = epoch * n_train_batches + idx
 
-                cost_ij = train_model(idx)
+                train_model(idx)
 
                 if iter % validation_frequency == 0:
                     # compute loss on training set
                     train_losses = [
-                        compute_train_error(i) for i in xrange(n_train_batches)
+                        compute_train_error(i) for i in np.shape(n_train_batches)[0]
                     ]
                     this_train_loss = np.mean(train_losses)
 
                     if interactive:
                         test_losses = [
-                            compute_test_error(i) for i in xrange(n_test_batches)
+                            compute_test_error(i) for i in np.shape(n_test_batches)[0]
                         ]
                         this_test_loss = np.mean(test_losses)
                         note = (
@@ -842,7 +841,7 @@ class LogisticRegression(object):
         if y.ndim != self.y_pred.ndim:
             raise TypeError(
                 "y should have the same shape as self.y_pred",
-                ("y", target.type, "y_pred", self.y_pred.type),
+                ("y", y.type, "y_pred", self.y_pred.type),
             )
         # check if y is of the correct datatype
         if y.dtype.startswith("int"):

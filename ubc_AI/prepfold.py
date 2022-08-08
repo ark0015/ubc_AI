@@ -1,12 +1,14 @@
-import numpy as np
-import sys
-import struct
 import copy
 import random
+import struct
+import sys
 
-from presto import psr_utils  # , infodata, polycos, 
-from presto import Pgplot
+import numpy as np
+from presto import Pgplot, infodata, polycos, psr_utils
 from presto.bestprof import bestprof
+
+from .utils import downsample, normalize
+
 
 def fromfile(file, dtype, count, *args, **kwargs):
     """Wrapper around np.fromfile to support any file-like object"""
@@ -31,8 +33,9 @@ def fromfile(file, dtype, count, *args, **kwargs):
     buffer.dtype = dtype
     return buffer
 
+
 class pfd:
-    def __init__(self, filename,**kwargs):
+    def __init__(self, filename, **kwargs):
         self.pfd_filename = filename
         infile = open(filename, "rb")
         # See if the .bestprof file is around
@@ -72,7 +75,7 @@ class pfd:
         ).decode("utf-8")
         self.pgdev = infile.read(struct.unpack(swapchar + "i", infile.read(4))[0])
         test = infile.read(16)
-        if not test[:8] == b"Unknown" and b":" in test:
+        if test[:8] != b"Unknown" and b":" in test:
             self.rastr = test[: test.find(b"\0")]
             test = infile.read(16)
             self.decstr = test[: test.find(b"\0")]
@@ -237,10 +240,10 @@ class pfd:
         self.start_secs = np.add.accumulate([0] + self.pts_per_fold[:-1]) * self.dt
         self.pts_per_fold = np.asarray(self.pts_per_fold)
         self.mid_secs = self.start_secs + 0.5 * self.dt * self.pts_per_fold
-        if not self.tepoch == 0.0:
+        if self.tepoch != 0.0:
             self.start_topo_MJDs = self.start_secs / 86400.0 + self.tepoch
             self.mid_topo_MJDs = self.mid_secs / 86400.0 + self.tepoch
-        if not self.bepoch == 0.0:
+        if self.bepoch != 0.0:
             self.start_bary_MJDs = self.start_secs / 86400.0 + self.bepoch
             self.mid_bary_MJDs = self.mid_secs / 86400.0 + self.bepoch
         self.Nfolded = np.add.reduce(self.pts_per_fold)
@@ -633,7 +636,7 @@ class pfd:
             normprof, labx="Phase Bins", laby="Normalized Flux", device=device
         )
 
-    def greyscale(self, array2d, **kwargs):
+    def pfd_greyscale(self, array2d, **kwargs):
         """
         greyscale(array2d, **kwargs):
             Plot a 2D array as a greyscale image using the same scalings
@@ -662,7 +665,7 @@ class pfd:
         else:
             lo, hi = 0.0, self.proflen
             profs = self.profs.sum(1)
-        self.greyscale(
+        self.pfd_greyscale(
             profs,
             rangex=[lo, hi],
             rangey=[0.0, self.npart],
@@ -694,7 +697,7 @@ class pfd:
             profs = self.profs.sum(0)
         lof = self.lofreq - 0.5 * self.chan_wid
         hif = lof + self.chan_wid * self.numchan
-        self.greyscale(
+        self.pfd_greyscale(
             profs,
             rangex=[lo, hi],
             rangey=[0.0, self.nsub],
@@ -728,7 +731,7 @@ class pfd:
         calc_redchi2(self, prof=None, avg=None, var=None):
             Return the calculated reduced-chi^2 of the current summed profile.
         """
-        if not "subdelays" in self.__dict__.keys():
+        if "subdelays" not in self.__dict__.keys():
             print("Dedispersing first...")
             self.dedisperse()
         if prof is None:
@@ -951,7 +954,7 @@ class pfd:
             hif = self.subfreqs[-1] + 0.5 * self.DSsubdeltafreq
             lot = 0.0
             hit = self.DSstart_secs[-1] + self.DSintdt
-            self.greyscale(
+            self.pfd_greyscale(
                 self.DS,
                 rangex=[lof, hif],
                 rangey=[lot, hit],
@@ -995,7 +998,7 @@ class pfddata(pfd):
         # pfddata.__counter__[0] += 1
         # print(pfddata.__counter__)
         # print('file initialization No.:', pfddata.__counter__[0])
-        if not "extracted_feature" in self.__dict__:
+        if "subdelays" not in self.__dict__.keys():
             self.extracted_feature = {}
         self.extracted_feature.update({"ratings:['period']": np.array([self.topo_p1])})
 
@@ -1035,9 +1038,8 @@ class pfddata(pfd):
         usage examples:
 
         """
-        if not "extracted_feature" in self.__dict__:
+        if "subdelays" not in self.__dict__.keys():
             self.extracted_feature = {}
-        profs = self.profs
 
         data = np.hstack(
             (
@@ -1057,8 +1059,8 @@ class pfddata(pfd):
         feature = "%s:%s" % ("phasebins", M)
         if M == 0:
             return np.array([])
-        if not feature in self.extracted_feature:
-            data = profs.sum(0).sum(0)
+        if feature not in self.extracted_feature:
+            data = self.profs.sum(0).sum(0)
             self.extracted_feature[feature] = normalize(
                 downsample(data, M, align=self.align).ravel()
             )
@@ -1068,9 +1070,9 @@ class pfddata(pfd):
         feature = "%s:%s" % ("freqbins", M)
         if M == 0:
             return np.array([])
-        if not feature in self.extracted_feature:
+        if feature not in self.extracted_feature:
             self.extracted_feature[feature] = normalize(
-                downsample(profs.sum(1).sum(0), M).ravel()
+                downsample(self.profs.sum(1).sum(0), M).ravel()
             )
         return self.extracted_feature[feature]
 
@@ -1078,9 +1080,9 @@ class pfddata(pfd):
         feature = "%s:%s" % ("timebins", M)
         if M == 0:
             return np.array([])
-        if not feature in self.extracted_feature:
+        if feature not in self.extracted_feature:
             self.extracted_feature[feature] = normalize(
-                downsample(profs.sum(0).sum(1), M).ravel()
+                downsample(self.profs.sum(0).sum(1), M).ravel()
             )
         return self.extracted_feature[feature]
 
@@ -1088,9 +1090,9 @@ class pfddata(pfd):
         feature = "%s:%s" % ("bandpass", M)
         if M == 0:
             return np.array([])
-        if not feature in self.extracted_feature:
+        if feature not in self.extracted_feature:
             self.extracted_feature[feature] = normalize(
-                downsample(profs.sum(0).sum(1), M).ravel()
+                downsample(self.profs.sum(0).sum(1), M).ravel()
             )
         return self.extracted_feature[feature]
 
@@ -1099,7 +1101,7 @@ class pfddata(pfd):
         feature = "%s:%s" % ("DMbins", M)
         if M == 0:
             return np.array([])
-        if not feature in self.extracted_feature:
+        if feature not in self.extracted_feature:
             ddm = (self.dms.max() - self.dms.min()) / 2.0
             loDM, hiDM = (self.bestdm - ddm, self.bestdm + ddm)
             loDM = max((0, loDM))  # make sure cut off at 0 DM
@@ -1133,7 +1135,7 @@ class pfddata(pfd):
                     for jj in range(self.nsub):
                         # profs[jj] = psr_utils.rotate(profs[jj], new_subdelays_bins[jj])
                         delay_bins = int(new_subdelays_bins[jj] % len(profs[jj]))
-                        if not delay_bins == 0:
+                        if delay_bins != 0:
                             profs[jj] = np.concatenate(
                                 (profs[jj][delay_bins:], profs[jj][:delay_bins])
                             )
@@ -1146,7 +1148,7 @@ class pfddata(pfd):
             self.extracted_feature[feature] = DMcurve
         return self.extracted_feature[feature]
 
-    def greyscale(self, img):
+    def pfddata_greyscale(self, img):
         global_max = np.maximum.reduce(np.maximum.reduce(img))
         min_parts = np.minimum.reduce(img, 1)
         img = (img - min_parts[:, np.newaxis]) / global_max
@@ -1156,8 +1158,8 @@ class pfddata(pfd):
         feature = "%s:%s" % ("intervals", M)
         if M == 0:
             return np.array([])
-        if not feature in self.extracted_feature:
-            img = greyscale(self.profs.sum(1))
+        if feature not in self.extracted_feature:
+            img = self.pfddata_greyscale(self.profs.sum(1))
             # U,S,V = svd(img)
             # imshow(img)
             # m,n = img.shape
@@ -1181,8 +1183,8 @@ class pfddata(pfd):
         feature = "%s:%s" % ("subbands", M)
         if M == 0:
             return np.array([])
-        if not feature in self.extracted_feature:
-            img = greyscale(self.profs.sum(0))
+        if feature not in self.extracted_feature:
+            img = self.pfddata_greyscale(self.profs.sum(0))
             # U,S,V = svd(img)
             # if M <= len(S):
             # return S[:M]
@@ -1198,9 +1200,9 @@ class pfddata(pfd):
 
     def getratings(self, L):
         feature = "%s:%s" % ("ratings", L)
-        if L == None:
+        if L is None:
             return np.array([])
-        if not feature in self.extracted_feature:
+        if feature not in self.extracted_feature:
             result = []
             for rating in L:
                 if rating == "period":

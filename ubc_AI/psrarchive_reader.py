@@ -1,8 +1,7 @@
-import sys, os
-import scipy.stats as stats
 import numpy as np
-import ubc_AI.samples
-import pylab
+import scipy.stats as stats
+
+from .utils import downsample, normalize
 
 try:
     import psrchive
@@ -102,12 +101,9 @@ class ar2data(object):
         usage examples:
 
         """
-        if not "extracted_feature" in self.__dict__:
+        if "extracted_feature" not in self.__dict__:
             self.extracted_feature = {}
         data = self.data
-
-        normalize = ubc_AI.samples.normalize
-        downsample = ubc_AI.samples.downsample
 
         data = np.hstack(
             (
@@ -123,43 +119,43 @@ class ar2data(object):
         )
         return data
 
-    def getsumprofs(self,M):
+    def getsumprofs(self, M):
         feature = "%s:%s" % ("phasebins", M)
         if M == 0:
             return np.array([])
-        prof = normalize(data).sum(0).sum(0)
+        prof = normalize(self.data).sum(0).sum(0)
         result = normalize(downsample(prof, M, align=self.align).ravel())
         self.extracted_feature[feature] = np.array(result)
         return self.extracted_feature[feature]
 
-    def getfreqprofs(self,M):
+    def getfreqprofs(self, M):
         feature = "%s:%s" % ("freqbins", M)
         if M == 0:
             return np.array([])
-        prof = normalize(data).sum(0).sum(1)
-        result = normalize(downsample(data, M, align=self.align).ravel())
+        normalize(self.data).sum(0).sum(1)
+        result = normalize(downsample(self.data, M, align=self.align).ravel())
         self.extracted_feature[feature] = np.array(result)
         return self.extracted_feature[feature]
 
-    def gettimeprofs(self,M):
+    def gettimeprofs(self, M):
         feature = "%s:%s" % ("timebins", M)
         if M == 0:
             return np.array([])
-        prof = normalize(data).sum(1).sum(1)
-        result = normalize(downsample(data, M, align=self.align).ravel())
+        normalize(self.data).sum(1).sum(1)
+        result = normalize(downsample(self.data, M, align=self.align).ravel())
         self.extracted_feature[feature] = np.array(result)
         return self.extracted_feature[feature]
 
-    def getbandpass(self,M):
+    def getbandpass(self, M):
         feature = "%s:%s" % ("bandpass", M)
         if M == 0:
             return np.array([])
-        prof = normalize(data).sum(0).sum(1)
-        result = normalize(downsample(data, M, align=self.align).ravel())
+        normalize(self.data).sum(0).sum(1)
+        result = normalize(downsample(self.data, M, align=self.align).ravel())
         self.extracted_feature[feature] = np.array(result)
         return self.extracted_feature[feature]
 
-    def getDMcurve(self,M):
+    def getDMcurve(self, M):
         feature = "%s:%s" % ("DMbins", M)
         if M == 0:
             return np.array([])
@@ -170,29 +166,29 @@ class ar2data(object):
         self.extracted_feature[feature] = np.array(result)
         return self.extracted_feature[feature]
 
-    def getintervals(self,M):
+    def getintervals(self, M):
         feature = "%s:%s" % ("intervals", M)
         if M == 0:
             return np.array([])
-        img = greyscale(data.sum(1))
+        img = greyscale(self.data.sum(1))
         result = downsample(normalize(img), M, align=self.align).ravel()
         self.extracted_feature[feature] = np.array(result)
         return self.extracted_feature[feature]
 
-    def getsubbands(self,M):
+    def getsubbands(self, M):
         feature = "%s:%s" % ("subbands", M)
         if M == 0:
             return np.array([])
-        img = greyscale(data.sum(0))
+        img = greyscale(self.data.sum(0))
         result = downsample(normalize(img), M, align=self.align).ravel()
         self.extracted_feature[feature] = np.array(result)
         return self.extracted_feature[feature]
 
-    def getratings(self,L):
+    def getratings(self, L):
         feature = "%s:%s" % ("ratings", L)
-        if L == None:
+        if L is None:
             return np.array([])
-        if not feature in self.extracted_feature:
+        if feature not in self.extracted_feature:
             result = []
             for rating in L:
                 if rating == "period":

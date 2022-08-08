@@ -1,17 +1,18 @@
 """
-Aaron Berndsen: a module which reads the ATNF database and 
+Aaron Berndsen: a module which reads the ATNF database and
 GBNCC discoveries page and provides a list of known pulsars.
 
-Pulsars are given as ephem.FixedBody objects, with all the 
+Pulsars are given as ephem.FixedBody objects, with all the
 ATNF pulsar properties in self.props[key].
 
 """
 
+import fractions
 import os
-import numpy as np
 import re
 from urllib.request import urlopen
 
+import numpy as np
 from bs4 import BeautifulSoup
 
 topdir = os.path.dirname(os.path.abspath(__file__))
@@ -312,7 +313,7 @@ def PALFA_jodrell_extrainfo():
         name = "J%s" % cols[0].text.strip("_jb.tim")
         dm = float(cols[3].text)
         p0 = float(cols[2].text) / 1000.0  # [ms] --> [s]
-        coords = name.strip("J")
+        # coords = name.strip("J")
         pulsars[name] = (p0, dm)
     return pulsars
 
@@ -897,7 +898,7 @@ def matches(allpulsars, pulsar, sep=0.6, harm_match=False, DM_match=False):
     for k, v in allpulsars.items():
         amatch = False
 
-        ## find positional matches
+        # find positional matches
         ra = hhmm2deg(v.ra)
         dec = ddmm2deg(v.dec)
         # use very wide "beam" for bright pulsars (the "B" pulsars)
@@ -914,7 +915,7 @@ def matches(allpulsars, pulsar, sep=0.6, harm_match=False, DM_match=False):
         elif dra <= sep and ddec <= sep:
             amatch = True
 
-        ## reject nearby objects if they aren't harmonics
+        # reject nearby objects if they aren't harmonics
         if amatch and harm_match:
             max_denom = 100
             num, den = harm_ratio(
@@ -928,7 +929,7 @@ def matches(allpulsars, pulsar, sep=0.6, harm_match=False, DM_match=False):
                 amatch = False
                 print("%s != a harmonic match (rejecting)" % k)
 
-        ## reject nearby objects if 15% difference in DM
+        # reject nearby objects if 15% difference in DM
         if amatch and DM_match:
             if (v.DM != np.nan) and (pulsar.DM != 0.0):
                 dDM = abs(v.DM - pulsar.DM) / pulsar.DM
@@ -936,7 +937,7 @@ def matches(allpulsars, pulsar, sep=0.6, harm_match=False, DM_match=False):
                     amatch = False
                     print("%s has a very different DM (rejecting)" % k)
 
-        ## finally, we've passed location, harmonic and DM matching
+        # finally, we've passed location, harmonic and DM matching
         if amatch:
             matches[v.name] = v
     return sorted(

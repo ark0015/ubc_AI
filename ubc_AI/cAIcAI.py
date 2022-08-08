@@ -3,15 +3,15 @@ Aaron Berndsen:
 class which wraps combinedAI with a 'feature'.
 
 """
+import fractions
+
 import numpy as np
-from ubc_AI.data import pfdreader
-from sklearn import linear_model, svm, mixture
 from scipy.optimize import curve_fit
-import scipy.stats as stats
+from sklearn import linear_model, svm
 
 # needed to extract harmonic of 60 Hz information:
 from ubc_AI.prepfold import pfd as PFD
-import fractions
+
 
 # Define model function to be used to fit to the data above:
 def gauss(x, *p):
@@ -27,10 +27,10 @@ def gaussfit(data):
     # (A, mu and sigma above)
     p0 = [1.0, 0.0, 1.0]
     try:
-        coeff, var_matrix = curve_fit(gauss, bin_centres, hist, p0=p0)
+        coeff, _ = curve_fit(gauss, bin_centres, hist, p0=p0)
     except (RuntimeError):
         coeff = np.ones(3)
-        var_matrix = np.eye(3)
+        # var_matrix = np.eye(3)
     return coeff
 
 
@@ -40,8 +40,8 @@ def PF0_fit(data, harms):
     Return [A]*Nharm
 
     """
-    As = np.ones_like(harms)
-    p = [As, harms]
+    # As = np.ones_like(harms)
+    # p = [As, harms]
     coeff, var_matrix = curve_fit(
         gauss,
         data,
@@ -115,19 +115,19 @@ class cAIcAI(object):
                 [harm_ratio(1.0 / PFD(pfd.pfdfile).topo_p1, max_denom=md) for pfd in X]
             )
         elif ["hist"] in self.feature:
-            h = np.array(self.feature["hist"])
+            # h = np.array(self.feature["hist"])
             # fit the histogram as a uniform distribution plus
             # sum of guassians on each harmonic (of width .1 MHz)
-            low = h.min()
-            hgh = h.max()
-            bins = np.arange(low, hgh, 0.2)  # .2 Hz bins
-            H = np.histogram(h, bins=bins)
+            # low = h.min()
+            # hgh = h.max()
+            # bins = np.arange(low, hgh, 0.2)  # .2 Hz bins
+            # H = np.histogram(h, bins=bins)
             harms = []
             for i in range(99):
                 harms.append(fractions.Fraction(i + 1, 100) * 60.0)
                 harms.append(fractions.Fraction(100, i + 1) * 60.0)
 
-            f = 1.0 / (hgh - low)  # + gauss(x, (XX
+            # f = 1.0 / (hgh - low)  # + gauss(x, (XX
 
         else:
             feats = np.array([self.GF(pfd.getdata(**self.feature)) for pfd in X])

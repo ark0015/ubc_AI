@@ -1,32 +1,13 @@
-import numpy as np
-import time
 import pickle
-import copy
 
-from sklearn.pipeline import Pipeline
-from sklearn.grid_search import GridSearchCV
-from sklearn.metrics import classification_report
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-
-from ubc_AI.threadit import threadit
-
-# threadit.func_defaults[0]['state'] = True
-from ubc_AI.training import pfddata
-
-import ubc_AI.pulsar_nnetwork as pnn
-import ubc_AI.training
-from ubc_AI.data import dataloader
 import ubc_AI.classifier as CLF
-
-from ubc_AI.data import singleclass_score
-
+from ubc_AI.data import dataloader
 
 """
 load data
 Class dataloader() will load data from either a pickled dataloader object or a text file
 with a list of pfd files and their classifications. The classifications should follow the
-pfd file name(with path) and can be either in 1 column format or 5 column format. In 5 
+pfd file name(with path) and can be either in 1 column format or 5 column format. In 5
 column format, the classifications should be in the order:
 pulsar | pulse profile | DM curve | time-vs-phase | frequency-vs-phase
 """

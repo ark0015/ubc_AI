@@ -1,0 +1,22 @@
+[flake8]
+max-line-length = 120
+max-complexity = 45
+ignore =
+  E501       # lines
+  E203,      # whitespace before ':'
+  E265,      # block comments
+  W503,      # line break before binary operator; conflicts with black
+  E225,      # missing whitespace around operator
+  E226,      # missing whitespace around arithmetic operator
+  E741,      # ambiguous variable names
+  E722,      # bare except ok
+  C901,      # Too complex if statements
+  E731,      # lambda expressions ok
+  # W504,      # Don't want to change with code frozen...
+exclude =
+    .git,
+    .tox,
+    __pycache__,
+    build,
+    dist,
+    docs/*,

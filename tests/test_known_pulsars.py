@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import pytest
-
-import ubc_AI
 from ubc_AI import known_pulsars
 
 

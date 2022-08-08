@@ -2,25 +2,24 @@
 """
 Aaron Berndsen (2012)
 
-a neural network implementation in python, with f2py/fortran 
+a neural network implementation in python, with f2py/fortran
 optimizations for large data sets
 
 """
-import numpy as np
-from random import shuffle
 import pickle
+import sys
+from copy import deepcopy
+from random import shuffle
+
+import numpy as np
 import pylab as plt
 from scipy import io
-from scipy import mgrid
 from scipy.optimize import fmin_cg
-import sys
 from sklearn.base import BaseEstimator
-
-from copy import deepcopy
 
 # Aaron's fortran-optimized openmp code
 try:
-    from nnopt import sigmoid2d, matmult
+    from nnopt import matmult, sigmoid2d
 
     _fort_opt = True
 except (ImportError):
@@ -43,7 +42,7 @@ def main():
     data.plot_samples(15)
     ###############
     # create the neural network,
-    nn = NeuralNetwork(gamma=0.0)
+    NeuralNetwork(gamma=0.0)
 
 
 def load_pickle(fname):
@@ -160,7 +159,7 @@ class NeuralNetwork(BaseEstimator):
         self.fit_type = fit_type
         self.nin = None
         self.nout = None
-        if maxiter == None:
+        if maxiter is None:
             self.maxiter = 100
         else:
             self.maxiter = maxiter
@@ -207,7 +206,7 @@ class NeuralNetwork(BaseEstimator):
                            in this layer
 
         """
-        if design == None:
+        if design is None:
             if self.design:
                 design = self.design
             else:
@@ -323,7 +322,7 @@ class NeuralNetwork(BaseEstimator):
         if isinstance(X, type([])):
             X = np.array(X)
 
-        if gamma == None:
+        if gamma is None:
             gamma = self.gamma
 
         # testing: check the theta's are changing while we train: yes!
@@ -439,7 +438,7 @@ class NeuralNetwork(BaseEstimator):
         if isinstance(X, type([])):
             X = np.array(X)
 
-        if gamma == None:
+        if gamma is None:
             gamma = self.gamma
 
         N = X.shape[0]
@@ -450,55 +449,51 @@ class NeuralNetwork(BaseEstimator):
             grads[li] = np.zeros_like(lv.theta)
 
         # vectorize sample-loop
-        if 1:
-            for li in range(nl, 0, -1):
-                z, a = self.forward_propagate(X, li)
+        deltan = 0.0
+        for li in range(nl, 0, -1):
+            z, a = self.forward_propagate(X, li)
 
-                if li == nl:
-                    ay = labels2vectors(y, self.ntargets).transpose()
-                    delta = a - ay
+            if li == nl:
+                ay = labels2vectors(y, self.ntargets).transpose()
+                delta = a - ay
+            else:
+                theta = self.layers[li].theta
+                aprime = np.hstack([np.ones((N, 1)), sigmoidGradient(z)])  # add in bias
+                # use fortran matmult if arrays are large
+                if _fort_opt and deltan.size * theta.size > 100000:
+                    tmp = matmult(deltan, theta.transpose())
                 else:
-                    theta = self.layers[li].theta
-                    aprime = np.hstack(
-                        [np.ones((N, 1)), sigmoidGradient(z)]
-                    )  # add in bias
-                    # use fortran matmult if arrays are large
-                    if _fort_opt and deltan.size * theta.size > 100000:
-                        tmp = matmult(deltan, theta.transpose())
-                    else:
-                        tmp = np.dot(
-                            deltan, theta.transpose()
-                        )  # nsamples x neurons(li)
-                    delta = tmp * aprime
+                    tmp = np.dot(deltan, theta.transpose())  # nsamples x neurons(li)
+                delta = tmp * aprime
 
-                # find contribution to grad
-                idx = li - 1
-                z, a = self.forward_propagate(X, idx)
-                if idx in grads:
-                    if li == nl:
-                        grads[idx] = np.dot(a.transpose(), delta) / N
-                    else:
-                        # strip off bias
-                        grads[idx] = np.dot(a.transpose(), delta[:, 1:]) / N
-
-                # if this is a "shift-invar" layer, find the average grad
-                if self.shiftlayer:
-                    if li == self.shiftlayer:
-                        shape = self.layers[li].theta.shape
-                        grads = grads.reshape(shape)
-                        l1 = grads[:, 0]
-                        dshift = N // m
-                        for i in range(m - 1):
-                            shift = -dshift * (i + 1)  # undo the previous shifts
-                            self.theta[:, i + 1] = np.roll(l1, shift)
-                        grad_avg = self.theta.mean(axis=0)
-                        grads = np.array([grad_avg for i in range(shape[1])]).flatten()
-
-                # keep this delta for the next (earlier) layer
+            # find contribution to grad
+            idx = li - 1
+            z, a = self.forward_propagate(X, idx)
+            if idx in grads:
                 if li == nl:
-                    deltan = delta
+                    grads[idx] = np.dot(a.transpose(), delta) / N
                 else:
-                    deltan = delta[:, 1:]
+                    # strip off bias
+                    grads[idx] = np.dot(a.transpose(), delta[:, 1:]) / N
+
+            # if this is a "shift-invar" layer, find the average grad
+            if self.shiftlayer:
+                if li == self.shiftlayer:
+                    shape = self.layers[li].theta.shape
+                    grads = grads.reshape(shape)
+                    l1 = grads[:, 0]
+                    dshift = N // N
+                    for i in range(N - 1):
+                        shift = -dshift * (i + 1)  # undo the previous shifts
+                        self.theta[:, i + 1] = np.roll(l1, shift)
+                    grad_avg = self.theta.mean(axis=0)
+                    grads = np.array([grad_avg for i in range(shape[1])]).flatten()
+
+            # keep this delta for the next (earlier) layer
+            if li == nl:
+                deltan = delta
+            else:
+                deltan = delta[:, 1:]
 
         # now regularize the grads (bias doesn't get get regularized):
         for li, lv in enumerate(self.layers):
@@ -576,13 +571,13 @@ class NeuralNetwork(BaseEstimator):
         global _niter
         _niter = 0
 
-        if gamma == None:
+        if gamma is None:
             gamma = self.gamma
         if verbose or self.verbose:
             verbose = True
-        if fit_type == None:
+        if fit_type is None:
             fit_type = self.fit_type
-        if maxiter == None:
+        if maxiter is None:
             maxiter = self.maxiter
 
         # train all layers at same time
@@ -614,9 +609,9 @@ class NeuralNetwork(BaseEstimator):
 
         # build up the NN, training each layer one at a time
         elif fit_type == "single":
-            if design == None:
+            if design is None:
                 design = self.design
-            if self.nin == None:
+            if self.nin is None:
                 self.nin = X.shape[1]
                 self.nout = np.unique(y).size
 
@@ -736,10 +731,6 @@ class NeuralNetwork(BaseEstimator):
         """
         if isinstance(X, type([])):
             X = np.array(X)
-        if len(X.shape) == 2:
-            N = X.shape[0]
-        else:
-            N = 1
 
         z, h = self.forward_propagate(X)
         norm = h.sum(axis=1)
@@ -771,7 +762,7 @@ class NeuralNetwork(BaseEstimator):
             true_cls[cls] = set([])
 
         for i, s in enumerate(X):
-            predict = self.predict(s)[0]
+            self.predict(s)[0]
             true_cls[y[i]].add(i)
             pred_cls[y[i]].add(i)
 
@@ -825,7 +816,7 @@ class NeuralNetwork(BaseEstimator):
                        default pct = 0.6
         plot : False/[True] optionally plot the learning curve
 
-        Note: if Xval == None, then we assume (X,y) is the entire set of data,
+        Note: if Xval is None, then we assume (X,y) is the entire set of data,
               and we split them up using split_data(data,target)
 
         returns three vectors of length(ntrials):
@@ -846,10 +837,10 @@ class NeuralNetwork(BaseEstimator):
            or increase the regularization parameter)
 
         """
-        if Xval == None:
+        if Xval is None:
             X, y, Xval, yval = split_data(X, y, pct=pct)
 
-        if gamma == None:
+        if gamma is None:
             gamma = self.gamma
 
         m = X.shape[0]
@@ -901,7 +892,7 @@ class NeuralNetwork(BaseEstimator):
                 [0., 0.0001, 0.0005, 0.001, 0.05, 0.1, .5, 1, 1.5, 15]
         plot : False/[True] optionally plot the validation cure
 
-        Note: if Xval == None, then we assume (X,y) is the entire set of data,
+        Note: if Xval is None, then we assume (X,y) is the entire set of data,
               and we split them up using split_data(data,target)
               Again, we train with regularization, but the erorr
               is calculated without
@@ -910,10 +901,10 @@ class NeuralNetwork(BaseEstimator):
         train_error(gamma), cross_val_error(gamma), gamma, best_gamma
 
         """
-        if Xval == None:
+        if Xval is None:
             X, y, Xval, yval = split_data(X, y, pct)
 
-        if gammas == None:
+        if gammas is None:
             gammas = [0.0, 0.0001, 0.0005, 0.001, 0.05, 0.1, 0.5, 1.0, 1.5, 15.0]
 
         train_error = np.zeros(len(gammas))
@@ -964,7 +955,7 @@ class NeuralNetwork(BaseEstimator):
             self.unflatten_thetas(origthetas)
             perturb[p] = 0
 
-        ## OLD
+        # OLD
         # loop over layers, neurons
         idx = 0
         if 0:
@@ -1043,7 +1034,7 @@ class NeuralNetwork(BaseEstimator):
         theta = self.layers[0].theta[1:, :]  # strip off bias
         nimg, nneurons = theta.shape
 
-        if imgdim == None:
+        if imgdim is None:
             nx = int(np.sqrt(nimg))
             ny = nx
             if nx * ny < nimg:
@@ -1058,7 +1049,7 @@ class NeuralNetwork(BaseEstimator):
             ny = 1
         #           return
 
-        if Nsamples == None:
+        if Nsamples is None:
             # plot all of them
             Nsamples = int(np.sqrt(nneurons))
             if Nsamples * Nsamples < nneurons:
@@ -1098,35 +1089,36 @@ class NeuralNetwork(BaseEstimator):
         plt.show()
 
 
-############# end class NeuralNetwork ***************
+############
+# end class NeuralNetwork
+############
 
-
+"""
 def checkGradients(nin=3, nout=3, ninternal=np.array([5]), Nsamples=5, gamma=0.0):
-    """
-    Create a small neural network to check
-    backpropagatoin gradients
+# Create a small neural network to check
+# backpropagatoin gradients
 
-    this routine compares analytical gradients to the numerical gradients
-    (as computed by compute_numericalGradients)
+# this routine compares analytical gradients to the numerical gradients
+# (as computed by compute_numericalGradients)
 
-    returns
-    numerical_gradient, gradient
+# returns
+# numerical_gradient, gradient
 
-    """
-    print("Creating small NN to compare numerical approx to gradient")
-    print("with actual gradient. Arrays should be identical")
+print("Creating small NN to compare numerical approx to gradient")
+print("with actual gradient. Arrays should be identical")
 
-    # create the neural network and some fake data
-    X = np.random.random((Nsamples, nin))
-    # labels from 0 <= y < nlabels = nout
-    y = np.array(np.random.uniform(0, nout, Nsamples), dtype=int)
+# create the neural network and some fake data
+X = np.random.random((Nsamples, nin))
+# labels from 0 <= y < nlabels = nout
+y = np.array(np.random.uniform(0, nout, Nsamples), dtype=int)
 
-    # neural network, delta=0 and thetas=[] --> theta is randomly inited.
-    nn = create_NN(nin, nout, ninternal=ninternal, thetas=np.array([]), delta=0)
+# neural network, delta=0 and thetas=[] --> theta is randomly inited.
+nn = create_NN(nin, nout, ninternal=ninternal, thetas=np.array([]), delta=0)
 
-    numgrad = nn.numericalGradients(X, y)
-    grad = nn.gradientU(X, y, gamma)
-    return numgrad, grad
+numgrad = nn.numericalGradients(X, y)
+grad = nn.gradientU(X, y, gamma)
+return numgrad, grad
+"""
 
 
 class handwritingpix(object):
@@ -1186,48 +1178,48 @@ class handwritingpix(object):
         plt.show()
 
 
-#### Utility Functions ####
+# Utility Functions
+"""
 def feature_curve(feature, originaldata, bounds=None, Npts=10, plot=False, pct=0.4):
-    """
-    returns the training and cross validation set errors
-    for a range of sizes of a given feature.
-    (good for diagnosing overfitting or underfitting/
-    high bias or high variance)
+    # returns the training and cross validation set errors
+    # for a range of sizes of a given feature.
+    # (good for diagnosing overfitting or underfitting/
+    # high bias or high variance)
 
-    Args:
-    classifier:  classifier
-    feature : string, name of the given feature
-    (e.g. phasebins, intervals)
-    originaldata : the original data loaded from pickled file, have ['pfds']
-    and ['target']
-    bounds : the range of feature sizes to explore
-    plot : whether or not to plot the scores
-    Npts : plot Npts points
-    pct (0<pct<1) : split the data as "pct" training, 1-pct testing
-                   only if Xval = None
-                   default pct = 0.6
-    plot : False/[True] optionally plot the learning curve
+    # Args:
+    # classifier:  classifier
+    # feature : string, name of the given feature
+    # (e.g. phasebins, intervals)
+    # originaldata : the original data loaded from pickled file, have ['pfds']
+    # and ['target']
+    # bounds : the range of feature sizes to explore
+    # plot : whether or not to plot the scores
+    # Npts : plot Npts points
+    # pct (0<pct<1) : split the data as "pct" training, 1-pct testing
+    #               only if Xval = None
+    #               default pct = 0.6
+    # plot : False/[True] optionally plot the learning curve
 
-    Note: if Xval == None, then we assume (X,y) is the entire set of data,
-          and we split them up using split_data(data,target)
+    # Note: if Xval is None, then we assume (X,y) is the entire set of data,
+    #       and we split them up using split_data(data,target)
 
-    returns three vectors of length(ntrials):
-    train_score: training error for the N=length(pct*X)
-    test_score: error on x-val data, when trainined on "i" samples
-    ntrials
+    # returns three vectors of length(ntrials):
+    # train_score: training error for the N=length(pct*X)
+    # test_score: error on x-val data, when trainined on "i" samples
+    # ntrials
 
-    vals = values of feature sizes (e.g. 8 -- 32)
+    # vals = values of feature sizes (e.g. 8 -- 32)
 
-    notes:
-    * a high error indicates lots of bias,
-      that you are probably underfitting the problem
-      (so add more neurons/layers, or lower regularization)
+    # notes:
+    # * a high error indicates lots of bias,
+    #   that you are probably underfitting the problem
+    #   (so add more neurons/layers, or lower regularization)
 
-    * for lots of trials, a high gap between training_error
-      and test_error (x-val error) indicates lots of variance
-      (you are over-fitting, so remove some neurons/layers,
-       or increase the regularization parameter)
-    """
+    # * for lots of trials, a high gap between training_error
+    #   and test_error (x-val error) indicates lots of variance
+    #   (you are over-fitting, so remove some neurons/layers,
+    #   or increase the regularization parameter)
+
     pfds = originaldata["pfds"]
     target = originaldata["target"]
     classdict = {0: [4, 5], 1: [6, 7]}
@@ -1235,7 +1227,7 @@ def feature_curve(feature, originaldata, bounds=None, Npts=10, plot=False, pct=0
         for val in v:
             target[target == val] = k
 
-    if bounds == None:
+    if bounds is None:
         vals = mgrid[8 : 32 : 1j * Npts]
     else:
         vals = mgrid[bounds[0] : bounds[1] : 1j * Npts]
@@ -1249,16 +1241,16 @@ def feature_curve(feature, originaldata, bounds=None, Npts=10, plot=False, pct=0
         train_data, train_target, test_data, test_target = split_data(
             data, target, pct=pct
         )
-        classifier = create_NN(train_data, train_target, ninternal=[9], gamma=0.00025)
+        # classifier = create_NN(train_data, train_target, ninternal=[9], gamma=0.00025)
         print(
             "\nfeature idx, size, data_shape: %s, %s, %s"
             % (i, int(val), train_data.shape)
         )
 
-        classifier.fit(train_data, train_target, maxiter=2222, raninit=True)
+        # classifier.fit(train_data, train_target, maxiter=2222, raninit=True)
         # record erro
-        train_score[i] = 1 - classifier.score(train_data, train_target)
-        test_score[i] = 1 - classifier.score(test_data, test_target)
+        # train_score[i] = 1 - classifier.score(train_data, train_target)
+        # test_score[i] = 1 - classifier.score(test_data, test_target)
     if plot:
         plt.plot(vals, train_score, "r+", label="training")
         plt.plot(vals, test_score, "bx", label="x-val")
@@ -1267,6 +1259,8 @@ def feature_curve(feature, originaldata, bounds=None, Npts=10, plot=False, pct=0
         plt.legend()
         plt.show()
     return train_score, test_score, vals, vals[test_score.argmax()]
+
+"""
 
 
 def labels2vectors(y, Nclass=1):

@@ -16,33 +16,31 @@ png: quick to display
 
 """
 import atexit
-import pickle
 import datetime
 import fractions
-import glob
-import numpy as np
-import os, pwd
+import os
+import pickle
+import pwd
 import shutil
 import subprocess
 import sys
 import tempfile
-import ubc_AI
-from os.path import abspath, basename, dirname, exists
+from ftplib import FTP
 from optparse import OptionParser
+from os.path import abspath, basename, dirname, exists
 
-from gi.repository import Gtk, Gdk
+import numpy as np
+import psrchive
 import pylab as plt
-
-# next taken from ubc_AI.training and ubc_AI.samples
-from ubc_AI.training import pfddata
-from ubc_AI.data import pfdreader
-import ubc_AI.known_pulsars as known_pulsars
-from ubc_AI.singlepulse import SPdata
-
+from gi.repository import Gdk, Gtk
 from sklearn.decomposition import RandomizedPCA as PCA
 
-import psrchive
-from ftplib import FTP
+import ubc_AI
+import ubc_AI.known_pulsars as known_pulsars
+from ubc_AI.data import pfdreader
+# next taken from ubc_AI.training and ubc_AI.samples
+from ubc_AI.prepfold import pfddata
+from ubc_AI.singlepulse import SPdata
 
 # check for ps --> png conversion utilities
 try:
@@ -105,7 +103,7 @@ class MainFrameGTK(Gtk.Window):
         self.builder = Gtk.Builder()
         self.builder.add_from_file(self.gladefile)
 
-        ## glade-related objects
+        # glade-related objects
         self.voterbox = self.builder.get_object("voterbox")
         self.pfdwin = self.builder.get_object("pfdwin")
         self.builder.connect_signals(self)
@@ -190,7 +188,7 @@ class MainFrameGTK(Gtk.Window):
             self.tmpAI_exp.set_expanded(1)
             # hack to get the checkmark "on", and preserve the tmpAI
             self.tmpAI = pickle.load(open(tmpAI, "r"))
-        #            self.info_win.resize()
+            # self.info_win.resize()
         else:
             self.tmpAI = None
             self.tmpAI_tog.set_active(0)
@@ -241,7 +239,7 @@ class MainFrameGTK(Gtk.Window):
         # set up the matching-pulsar tree
         self.pmatch_tree_init()
 
-        ## data-analysis related objects
+        # data-analysis related objects
         self.voters = []
         self.savefile = None
         self.loadfile = None
@@ -324,7 +322,7 @@ class MainFrameGTK(Gtk.Window):
         self.AIviewfiles = {}
 
     ############################
-    ## data-manipulation actions
+    # data-manipulation actions
     def on_sep_change(self, widget):
         """
         respond to changes in the pulsar matching separation
@@ -348,7 +346,7 @@ class MainFrameGTK(Gtk.Window):
         col1 = self.col1.get_active_text()
         col2 = self.col2.get_active_text()
         idx1 = self.col_options.index(col1)
-        if col2 == None:
+        if col2 is None:
             col2 = col1
             self.col2.set_active(idx1)
         idx2 = self.col_options.index(col2)
@@ -425,10 +423,10 @@ class MainFrameGTK(Gtk.Window):
         col1 = self.col1.get_active_text()
         col2 = self.col2.get_active_text()
         idx1 = self.col_options.index(col1)
-        if col2 == None:
+        if col2 is None:
             col2 = col1
             self.col2.set_active(idx1)
-        idx2 = self.col_options.index(col2)
+        # idx2 = self.col_options.index(col2)
 
         if len(self.pfdstore) == 0:
             return None  # do nothing
@@ -467,7 +465,7 @@ class MainFrameGTK(Gtk.Window):
             #else:
                 #self.statusbar.push(0,'No %s candidates > %s in DM. Showing all' % (col1, lim))
             #for vi, v in enumerate(data[::-1]):
-                #d = (vi,) + v.tolist() 
+                #d = (vi,) + v.tolist()
                 #self.pfdstore.append(d)
         #else:
             #data = self.data[['fname',col1]]
@@ -475,7 +473,7 @@ class MainFrameGTK(Gtk.Window):
                 #dtyp = [(name, self.data.dtype[name].str) \
                             #for name in ['fname', col1]]
                 #data = np.array([data], dtype=dtyp)
-            
+
             data.sort(order=[col1,'fname'])
             limidx = data[col1] >= lim - 1e-5
             if limidx.size > 1 and np.any(limidx) and limtog:
@@ -487,12 +485,12 @@ class MainFrameGTK(Gtk.Window):
             for vi, v in enumerate(data[::-1]):
                 v0, v1 = v
                 self.pfdstore.append((vi,v0,float(v1),float(v1)))
-                    
+
         self.pfdtree.set_model(self.pfdstore)
         self.find_matches()
         """
 
-    def on_pfdwin_key_press_event(self, widget, event):
+    def on_key_press(self, widget, event):
         """
         controls keypresses on over-all window
 
@@ -500,7 +498,7 @@ class MainFrameGTK(Gtk.Window):
         #we cycle through the subplots before advancing
 
         """
-        global cand_vote, have_warned
+        # global cand_vote, have_warned
 
         # are we doing feature-label voting?
         FL = False
@@ -528,7 +526,7 @@ class MainFrameGTK(Gtk.Window):
         }
 
         key = Gdk.keyval_name(event.keyval)
-        ctrl = event.state & Gdk.ModifierType.CONTROL_MASK
+        event.state & Gdk.ModifierType.CONTROL_MASK
         if self.active_voter:
             act_name = self.voters[self.active_voter]
             if self.fl_voting_tog.get_active():
@@ -541,38 +539,40 @@ class MainFrameGTK(Gtk.Window):
         col2 = self.col2.get_active_text()
         sort_id = self.pfdstore.get_sort_column_id()[0]
         # 0=number, 1=fname, 2=col1, 3=col2
-        if (sort_id == 2) and (act_name == col1) and key in votes:
-            note = "Note. Voting disabled when active voter = sort column. \n"
-            note += "Try sorting by filename"
-            if not have_warned:
-                dlg = Gtk.MessageDialog(
-                    self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, note
-                )
-                response = dlg.run()
-                dlg.destroy()
-                have_warned = True
-                self.statusbar.push(0, "Vote not recorded. voter = sort column")
-            else:
+        have_warned = False
+        if key in votes:
+            if (sort_id == 2) and (act_name == col1):
+                note = "Note. Voting disabled when active voter = sort column. \n"
+                note += "Try sorting by filename"
+                if not have_warned:
+                    dlg = Gtk.MessageDialog(
+                        self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, note
+                    )
+                    dlg.run()
+                    dlg.destroy()
+                    have_warned = True
+                    self.statusbar.push(0, "Vote not recorded. voter = sort column")
+                else:
+                    self.statusbar.push(0, note)
+                return
+            elif (sort_id == 3) and (act_name == col2):
+                note = "Note. Voting disabled when active voter = sort column"
+                if not have_warned:
+                    dlg = Gtk.MessageDialog(
+                        self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, note
+                    )
+                    dlg.run()
+                    dlg.destroy()
+                    have_warned = True
+                    self.statusbar.push(0, "Vote not recorded. voter = sort column")
+                else:
+                    self.statusbar.push(0, note)
+                return
+            if act_name == "AI":
+                note = "Note: AI voter is not editable. Change active voter"
+                print(note)
                 self.statusbar.push(0, note)
-            return
-        elif (sort_id == 3) and (act_name == col2) and key in votes:
-            note = "Note. Voting disabled when active voter = sort column"
-            if not have_warned:
-                dlg = Gtk.MessageDialog(
-                    self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, note
-                )
-                response = dlg.run()
-                dlg.destroy()
-                have_warned = True
-                self.statusbar.push(0, "Vote not recorded. voter = sort column")
-            else:
-                self.statusbar.push(0, note)
-            return
-        elif act_name == "AI" and key in votes:
-            note = "Note: AI voter is not editable. Change active voter"
-            print(note)
-            self.statusbar.push(0, note)
-            return
+                return
 
         # if we've made it this far than we can record the vote...
         (model, pathlist) = self.pfdtree.get_selection().get_selected_rows()
@@ -593,7 +593,7 @@ class MainFrameGTK(Gtk.Window):
                 data = self.pfdstore[next_iter]
                 while not np.isnan(data[adv_col]):
                     next_iter = model.iter_next(next_iter)
-                    if next_iter == None:
+                    if next_iter is None:
                         self.statusbar.push(
                             0,
                             "No unranked candidates in voter col %i. You are Done!"
@@ -652,7 +652,7 @@ class MainFrameGTK(Gtk.Window):
         # data-related (needs to be loaded)
         if self.data:
             if key in votes:
-                cand_vote += 1
+                # cand_vote += 1
 
                 # download the candidate if we are in QRY mode
                 if self.data_fromQry:
@@ -734,7 +734,7 @@ class MainFrameGTK(Gtk.Window):
                 dlg = Gtk.MessageDialog(
                     self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, note
                 )
-                response = dlg.run()
+                dlg.run()
                 dlg.destroy()
 
     def add_candidate_to_knownpulsars(self, fname):
@@ -779,14 +779,14 @@ class MainFrameGTK(Gtk.Window):
 
         """
         if self.active_voter:
-            act_name = self.voters[self.active_voter]
+            # act_name = self.voters[self.active_voter]
             # update the Treeview...
             if self.data:
 
                 col1 = self.col1.get_active_text()
                 col2 = self.col2.get_active_text()
                 idx1 = self.col_options.index(col1)
-                if col2 == None:
+                if col2 is None:
                     col2 = col1
                     self.col2.set_active(idx1)
                 idx2 = self.col_options.index(col2)
@@ -863,7 +863,7 @@ class MainFrameGTK(Gtk.Window):
             col1 = self.col1.get_active_text()
             col2 = self.col2.get_active_text()
             idx1 = self.col_options.index(col1)
-            if col2 == None:
+            if col2 is None:
                 col2 = col1
                 self.col2.set_active(idx1)
             idx2 = self.col_options.index(col2)
@@ -948,7 +948,7 @@ class MainFrameGTK(Gtk.Window):
         if self.fl_voting_tog.get_active():
             FL = True
 
-        ncol = self.pfdstore.get_n_columns()
+        # ncol = self.pfdstore.get_n_columns()
         if tmpiter:
             name = tmpstore.get_value(tmpiter, 1)
             if self.data_fromQry:
@@ -1143,7 +1143,7 @@ class MainFrameGTK(Gtk.Window):
                 Gtk.ButtonsType.OK,
                 "Can't find %s.\n\n Please select a base path for this file" % fname,
             )
-            response = dlg.run()
+            dlg.run()
             dlg.destroy()
             dialog = Gtk.FileChooserDialog(
                 "Choose base path for %s" % os.path.splitext(fname)[0],
@@ -1317,7 +1317,7 @@ class MainFrameGTK(Gtk.Window):
         fd, fpng = tempfile.mkstemp(dir=tempdir, suffix=".png")
         plt.savefig(fpng)
         # keep track of which AI views have been generated already
-        if not self.AIviewfiles.has_key(fname):
+        if fname not in self.AIviewfiles:
             # I like my dictionaries: store the AIview for
             # each pfd in a dictionary of dictionaries
             self.AIviewfiles[fname] = {}
@@ -1356,8 +1356,8 @@ class MainFrameGTK(Gtk.Window):
             AIview.append([nbins, npca_comp])
 
         fpng = ""
-        if self.AIviewfiles.has_key(fname):
-            if self.AIviewfiles[fname].has_key(str(AIview)):
+        if fname in self.AIviewfiles.keys():
+            if str(AIview) in self.AIviewfiles[fname].keys():
                 fpng = self.AIviewfiles[fname][str(AIview)]
         return fpng
 
@@ -1441,7 +1441,7 @@ class MainFrameGTK(Gtk.Window):
         else:
             tmpiter = None
 
-        ncol = self.pfdstore.get_n_columns()
+        # ncol = self.pfdstore.get_n_columns()
         if tmpiter:
 
             #            candname = os.path.join(self.basedir, tmpstore.get_value(tmpiter, 0))
@@ -1455,7 +1455,7 @@ class MainFrameGTK(Gtk.Window):
                 tree_iter = model.get_iter(path)
                 # update self.data (since dealing with TreeStore blows my mind)
                 fname, p0, dm, ra, dec, vote = self.pmatch_store[tree_iter]
-                if self.knownpulsars.has_key(fname):
+                if fname in self.knownpulsars.keys():
                     cat = self.knownpulsars[fname].catalog
                     self.statusbar.push(0, "Selected match found: %s" % cat)
                 else:
@@ -1566,7 +1566,7 @@ class MainFrameGTK(Gtk.Window):
         else:
             self.tmpAI = None
 
-        if self.tmpAI == None:
+        if self.tmpAI is None:
             self.tmpAI_exp.set_expanded(0)
             #            self.info_win.resize()
             if not self.AIview_exp.get_expanded():
@@ -1609,13 +1609,13 @@ class MainFrameGTK(Gtk.Window):
             self.tmpAI_overall.set_text("overall voting performance: N/A")
 
     def on_FL_voting_toggled(self, event):
-        FL_votes = {
-            0: "FL_overall",
-            1: "FL_profile",
-            2: "FL_intervals",
-            3: "FL_subbands",
-            4: "FL_DMcurve",
-        }
+        # FL_votes = {
+        # 0: "FL_overall",
+        # 1: "FL_profile",
+        # 2: "FL_intervals",
+        # 3: "FL_subbands",
+        # 4: "FL_DMcurve",
+        # }
         # if we're turning this on, make sure the current voter has a '_FL' column
         if self.active_voter:
             act_name = self.voters[self.active_voter]
@@ -1714,9 +1714,9 @@ class MainFrameGTK(Gtk.Window):
         black = Gdk.color_parse("#000000")
         for v in vals:
             o = self.builder.get_object(v)
-            value = o.get_text()
+            o.get_text()
             try:
-                t = int(o.get_text())
+                int(o.get_text())
                 o.modify_fg(Gtk.StateType.NORMAL, black)
             except ValueError:
                 o.modify_fg(Gtk.StateType.NORMAL, red)
@@ -1729,7 +1729,7 @@ class MainFrameGTK(Gtk.Window):
         value
 
         """
-        self.onpfdwin_key_press_event(self, widget, event)
+        self.on_key_press(self, widget, event)
 
     def on_voterbox_changed(self, event=None):
         """
@@ -1738,7 +1738,7 @@ class MainFrameGTK(Gtk.Window):
         add '_FL' if necessary
 
         """
-        curpos = self.pfdtree.get_cursor()[0]
+        self.pfdtree.get_cursor()[0]
 
         prev_voter = self.active_voter
         voter = self.voterbox.get_active_text()
@@ -1786,7 +1786,7 @@ class MainFrameGTK(Gtk.Window):
             # print(self.data[act_name])
 
     ############################
-    ## menu-related actions
+    # menu-related actions
 
     def on_menubar_delete_event(self, widget, event=None):
 
@@ -1800,7 +1800,7 @@ class MainFrameGTK(Gtk.Window):
         response = dlg.run()
 
         if response == Gtk.ResponseType.OK:
-            if self.savefile == None and cand_vote > 0:
+            if self.savefile is None and cand_vote > 0:
                 savdlg = Gtk.MessageDialog(
                     self,
                     0,
@@ -1892,7 +1892,7 @@ class MainFrameGTK(Gtk.Window):
                     if v != "<new>":
                         self.data = add_voter(v, self.data)
 
-            if self.active_voter == None:
+            if self.active_voter is None:
                 self.active_voter = 1
             elif self.active_voter >= len(self.voters):
                 self.active_voter = len(self.voters)
@@ -1912,7 +1912,7 @@ class MainFrameGTK(Gtk.Window):
         self.dataload_update()
         self.pfdtree.set_cursor(0)
 
-        if self.knownpulsars == None:
+        if self.knownpulsars is None:
             self.statusbar.push(
                 0, "Downloading ATNF, PALFA and GBNCC list of known pulsars"
             )
@@ -1959,7 +1959,7 @@ class MainFrameGTK(Gtk.Window):
         dialog = Gtk.MessageDialog(
             self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, note
         )
-        response = dialog.run()
+        dialog.run()
         dialog.destroy()
 
     def on_save(self, event=None):
@@ -1967,7 +1967,7 @@ class MainFrameGTK(Gtk.Window):
         save the data.
 
         """
-        if self.savefile == None:
+        if self.savefile is None:
             dialog = Gtk.FileChooserDialog(
                 "choose an output file.",
                 self,
@@ -2003,7 +2003,7 @@ class MainFrameGTK(Gtk.Window):
             dialog.destroy()
 
         #        print("Writing data to %s" % self.savefile)
-        if self.savefile == None:
+        if self.savefile is None:
             note = "No file selected. Votes not saved"
             print(note)
             self.statusbar.push(0, note)
@@ -2023,7 +2023,7 @@ class MainFrameGTK(Gtk.Window):
             names = [
                 name
                 for name in self.data.dtype.names
-                if not name in ["featurevoter_FL", "featurevoter"]
+                if name not in ["featurevoter_FL", "featurevoter"]
             ]
             if "featurevoter_FL" in self.data.dtype.names:
                 self.data["Overall"] = self.data["featurevoter_FL"][..., 0]
@@ -2061,7 +2061,7 @@ class MainFrameGTK(Gtk.Window):
         self.on_save(event)
 
     ############################
-    ## gui related actions
+    # gui related actions
 
     def pmatch_tree_init(self):
         """
@@ -2111,7 +2111,7 @@ class MainFrameGTK(Gtk.Window):
     def on_autosave_toggled(self, event):
         """ """
         if self.autosave.get_active():
-            if self.savefile == None:
+            if self.savefile is None:
                 self.on_save(event)
             else:
                 self.statusbar.push(0, "Saving to %s" % self.savefile)
@@ -2126,7 +2126,7 @@ class MainFrameGTK(Gtk.Window):
 
         # set cursor to first entry when loading a data file
         if event == "load":
-            if self.data == None:
+            if self.data is None:
                 ncand = 0
             else:
                 ncand = len(self.data)
@@ -2277,7 +2277,7 @@ class MainFrameGTK(Gtk.Window):
                     # don't include if this isn't a harmonic match
                     if pdiff > 1.0:
                         if verbose:
-                            print("  rejecting %s since pdiff = " % (m.name, pdiff))
+                            print("  rejecting %s since pdiff = %s" % (m.name, pdiff))
                         continue
 
                     if (m.DM != np.nan) and (this_pulsar.DM != 0.0):
@@ -2476,7 +2476,7 @@ class MainFrameGTK(Gtk.Window):
         self.statusbar.push(0, "Downloading ATNF and GBNCC databases")
         newlist = known_pulsars.get_allpulsars()
         fout = abspath("known_pulsars.pkl")
-        if self.knownpulsars == None:
+        if self.knownpulsars is None:
             self.knownpulsars = newlist
             pickle.dump(self.knownpulsars, open(fout, "w"))
             self.statusbar.push(
@@ -2520,7 +2520,7 @@ class MainFrameGTK(Gtk.Window):
         print("executing query")
 
         try:
-            from config.commondb import username, password
+            from config.commondb import password, username
 
             pwd = username
             uname = password
@@ -2540,7 +2540,7 @@ class MainFrameGTK(Gtk.Window):
             dbv = "JPRDYEukmQQ3"
         print("DBV", dbv)
         database = Vdecode(uname + pwd, dbv)
-        table_name = Vdecode(pwd + uname, "EXW_Qucjgbcnb_Oxhkowyh_Dgnyphfiyw")
+        Vdecode(pwd + uname, "EXW_Qucjgbcnb_Oxhkowyh_Dgnyphfiyw")
 
         # file with list of query subs
         fin = self.palfaqry_subfile.get_filename()
@@ -2699,7 +2699,7 @@ class MainFrameGTK(Gtk.Window):
             pfdloc = [pfdloc]
 
         try:
-            from config.commondb import username, password
+            from config.commondb import password, username
 
             pwd = username
             uname = password
@@ -2778,10 +2778,10 @@ class MainFrameGTK(Gtk.Window):
         self.dataload_update()
 
 
-####### end MainFrame class ####
+# end MainFrame class ####
 
 ################################
-## utilities
+# utilities
 
 
 def palfa_query(conn, qry, fin, loc_qry):
@@ -2896,7 +2896,6 @@ def convert(fin):
         if not show_pfd:
             dialog = Gtk.FileChooserDialog(
                 "Locate show_pfd executable",
-                self,
                 Gtk.FileChooserAction.OPEN,
                 (
                     Gtk.STOCK_CANCEL,
@@ -2909,7 +2908,7 @@ def convert(fin):
             if response == Gtk.ResponseType.OK:
                 print("Select clicked")
                 show_pfd = dialog.get_filename()
-                print("File selected: " + fname)
+                print("File selected: " + fin)
             elif response == Gtk.ResponseType.CANCEL:
                 print("Cancel clicked")
         if show_pfd:
@@ -2956,7 +2955,6 @@ def convert(fin):
         if not pdmp:
             dialog = Gtk.FileChooserDialog(
                 "Locate pdmp executable",
-                self,
                 Gtk.FileChooserAction.OPEN,
                 (
                     Gtk.STOCK_CANCEL,
@@ -2969,7 +2967,7 @@ def convert(fin):
             if response == Gtk.ResponseType.OK:
                 print("Select clicked")
                 show_pfd = dialog.get_filename()
-                print("File selected: " + fname)
+                print("File selected: " + fin)
             elif response == Gtk.ResponseType.CANCEL:
                 print("Cancel clicked")
         if pdmp:
@@ -3126,7 +3124,7 @@ def load_data(fname):
                     #                    nv = cols[ni+1]
                     try:
                         # test if this is a regular column
-                        val = float(nv)
+                        float(nv)
                         colnames.append("voter%s" % ni)
                         coltypes.append("f8")
                     except (TypeError, ValueError):
@@ -3166,7 +3164,7 @@ def load_data(fname):
                     if v != "|S15":
                         new_data[k] = data[k]
                     else:
-                        for i in xrange(data.size):
+                        for i in range(data.size[0]):
                             new_data[k][i] = eval(data[k][i])
                 data = new_data
             if "DMCurve" in data.dtype.names:
@@ -3259,7 +3257,7 @@ def inputbox(title="Input Box", label="Please input the value", parent=None, tex
 def messagedialog(
     dialog_type,
     short,
-    long=None,
+    longg=None,
     parent=None,
     buttons=Gtk.ButtonsType.OK,
     additional_buttons=None,
@@ -3273,16 +3271,16 @@ def messagedialog(
 
     d.set_markup(short)
 
-    if long:
-        if isinstance(long, Gtk.Widget):
-            widget = long
-        elif isinstance(long, basestring):
+    if longg:
+        if isinstance(longg, Gtk.Widget):
+            widget = longg
+        elif isinstance(longg, str):
             widget = Gtk.Label()
-            widget.set_markup(long)
+            widget.set_markup(longg)
         else:
-            raise TypeError("long must be a Gtk.Widget or a string")
+            raise TypeError("longg must be a Gtk.Widget or a string")
 
-        expander = Gtk.Expander(_("Click here for details"))
+        expander = Gtk.Expander(("Click here for details"))
         expander.set_border_width(6)
         expander.add(widget)
         d.vbox.pack_end(expander)

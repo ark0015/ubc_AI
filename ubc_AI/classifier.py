@@ -1,21 +1,21 @@
+import multiprocessing as MP
 import pickle
+import sys
+
+import __main__ as MAIN
+import numpy as np
 import numpy.random as random
 from numpy.random import shuffle
-import numpy as np
-
+from sklearn import ensemble, linear_model, svm, tree
 from sklearn.decomposition import PCA
-from sklearn import svm, linear_model, tree, ensemble
 from sklearn.ensemble import GradientBoostingClassifier as GBC
 
 import ubc_AI
-from ubc_AI.training import split_data
-from ubc_AI import pulsar_nnetwork as pnn
 from ubc_AI import TF_cnn as tfcnn
-
+from ubc_AI import pulsar_nnetwork as pnn
 # multiprocess only works in non-interactive mode:
 from ubc_AI.threadit import threadit
-import multiprocessing as MP
-import __main__ as MAIN
+from ubc_AI.training import split_data
 
 if hasattr(MAIN, "__file__"):
     InteractivePy = False
@@ -338,7 +338,7 @@ class combinedAI(object):
         if not type(pfds) in (list, tuple):
             pfds = [pfds]
 
-        if not self.__dict__.has_key("prior_freq_dist"):
+        if "prior_freq_dist" not in self.__dict__.keys():
             ubcAI_path = ubc_AI.__path__[0]
             # Note: we expect a dictionary whose key is 'Pfr_over_Pfp'
             self.prior_freq_dist = pickle.load(open(ubcAI_path + "/" + dist, "rb"))
@@ -432,7 +432,7 @@ class classifier(object):
     }
 
     def __init__(self, feature=None, use_pca=False, n_comp=12, **kwargs):
-        if feature == None:
+        if feature is None:
             raise MyError(None)
         self.feature = feature
         self.use_pca = use_pca
@@ -839,10 +839,10 @@ class adaboost(object):
         npreds = len(self.weights)
         if lops.ndim == 2:
             nclass = lops.shape[1] // npreds
-            nsamples = lops.shape[0]
+            # nsamples = lops.shape[0]
         else:
             nclass = lops.shape[0] // npreds
-            nsamples = 1
+            # nsamples = 1
             lops = np.array([lops])
 
         if self.platt:
@@ -854,10 +854,10 @@ class adaboost(object):
             npreds = len(self.weights)
             if lops.ndim == 2:
                 nclass = lops.shape[1] // npreds
-                nsamples = lops.shape[0]
+                # nsamples = lops.shape[0]
             else:
                 nclass = lops.shape[0] // npreds
-                nsamples = 1
+                # nsamples = 1
 
             # H(x) works on sign(sum_i w[i]h_i(x))
             # so shift all predictions (0 < lops < 1) to (-1 < lops < 1)
@@ -904,7 +904,7 @@ def extractfeatures(AIlist, pfds):
 
         resultdict = threadit(getfeature, [[p] for p in pfds])
         for n, pfd in resultdict.items():
-            if pfd == None:
+            if pfd is None:
                 print("ZeroDivisionError: ", pfds[n].pfdfile)
                 raise ZeroDivisionError
             pfds[n] = pfd

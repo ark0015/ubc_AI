@@ -1,16 +1,9 @@
 import pickle
-import numpy as np
+from random import shuffle
 
 import matplotlib.pyplot as plt
-from random import shuffle
+import numpy as np
 from scipy import mgrid
-
-# from scipy.linalg import svd
-# from pylab import *
-
-from ubc_AI.samples import downsample, normalize
-
-from presto import psr_utils
 
 
 class cross_validation(object):
@@ -111,7 +104,7 @@ def multiclass_score(
         tot_accuracy += accuracy
         # F1 = 2/((1./precision)+(1./recall))
         F1 = 2 * precision * recall / (precision + recall)
-        if aclass != None:
+        if aclass is not None:
             if k == aclass:
                 aF1 = F1
         tot_F1 += F1
@@ -134,7 +127,7 @@ def multiclass_score(
 
     tot_accuracy = tot_accuracy / nclasses
     tot_F1 = tot_F1 / nclasses
-    if aclass == None:
+    if aclass is None:
         return tot_F1
     else:
         #            print("returngin F1 score for class", aclass)
@@ -199,7 +192,7 @@ def learning_curve(
                    default pct = 0.6
     plot : False/[True] optionally plot the learning curve
 
-    Note: if Xval == None, then we assume (X,y) is the entire set of data,
+    Note: if Xval is None, then we assume (X,y) is the entire set of data,
           and we split them up using split_data(data,target)
 
     returns three vectors of length(ntrials):
@@ -223,7 +216,7 @@ def learning_curve(
     if not Xval:
         X, y, Xval, yval = split_data(X, y, pct=pct)
 
-    # if gamma == None:
+    # if gamma is None:
     # gamma = classifier.gamma
 
     m = X.shape[0]
@@ -276,7 +269,7 @@ def validation_curve(
             [0., 0.0001, 0.0005, 0.001, 0.05, 0.1, .5, 1, 1.5, 15]
     plot : False/[True] optionally plot the validation cure
 
-    Note: if Xval == None, then we assume (X,y) is the entire set of data,
+    Note: if Xval is None, then we assume (X,y) is the entire set of data,
           and we split them up using split_data(data,target)
 
     returns:
@@ -368,7 +361,7 @@ def feature_curve(
                    default pct = 0.6
     plot : False/[True] optionally plot the learning curve
 
-    Note: if Xval == None, then we assume (X,y) is the entire set of data,
+    Note: if Xval is None, then we assume (X,y) is the entire set of data,
           and we split them up using split_data(data,target)
 
     returns three vectors of length(ntrials):
@@ -396,7 +389,7 @@ def feature_curve(
     for k, v in classmap.items():
         for val in v:
             target[orig_target == val] = k
-    if bounds == None:
+    if bounds is None:
         vals = mgrid[8 : 32 : 1j * Npts]
     else:
         vals = mgrid[bounds[0] : bounds[1] : 1j * Npts]
@@ -440,7 +433,7 @@ class datafitter(object):
             originaldata = pickle.load(fileobj)
             self.pfds = originaldata["pfds"]
             self.orig_target = originaldata["target"]
-            if classmap == None:
+            if classmap is None:
                 self.classmap = {0: [4, 5], 1: [6, 7]}
             else:
                 self.classmap = classmap
@@ -495,7 +488,7 @@ class datafitter(object):
     def learning_curve(
         self, classifier, Xval=None, yval=None, gamma=None, pct=0.6, plot=True
     ):
-        if not "test_data" in self.__dict__ or not "test_target" in self.__dict__:
+        if "test_data" not in self.__dict__ or "test_target" not in self.__dict__:
             self.train(classifier)
         return learning_curve(
             classifier,
@@ -524,15 +517,15 @@ class datafitter(object):
         )
 
     def train(self, clf):
-        if not "test_data" in self.__dict__ or not "test_target" in self.__dict__:
+        if "test_data" not in self.__dict__ or "test_target" not in self.__dict__:
             self.split()
         self.trainclassifiers[clf] = True
         clf.fit(self.train_data, self.train_target)
 
     def plot_prediction(self, clf, what):
-        if not "test_data" in self.__dict__ or not "test_target" in self.__dict__:
+        if "test_data" not in self.__dict__ or "test_target" not in self.__dict__:
             self.train(clf)
-        elif not clf in self.trainclassifiers:
+        elif clf not in self.trainclassifiers:
             clf.fit(self.train_data, self.train_target)
 
         pdts = clf.predict(self.test_data)
@@ -659,7 +652,7 @@ class datafitter(object):
 
         Note: assume pulsar is classed/targetted as '1'
         """
-        if not "test_data" in self.__dict__ or not "test_target" in self.__dict__:
+        if "test_data" not in self.__dict__ or "test_target" not in self.__dict__:
             self.split()
 
         # intersection of all pulsars

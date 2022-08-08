@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-import sys
 import glob
-import pickle
-import pytest
-import presto
+import os
 
-import ubc_AI
 from ubc_AI.data import pfdreader
-from ubc_AI import known_pulsars
+
+# import pickle
+# import sys
+
+# import presto
+
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 datadir = os.path.join(testdir, "data")
@@ -32,26 +32,17 @@ def test_pfdreader():
     bins = 64
     ndms = 64
     apfd = pfdreader(filename)
-    TvP = apfd.getdata(intervals=bins).reshape(bins, bins)
-    FvP = apfd.getdata(subbands=bins).reshape(bins, bins)
-    profile = apfd.getdata(phasebins=bins)
-    DMc = apfd.getdata(DMbins=ndms)
-
-    # np.savetxt(filename+'.profile', profile)
-    # np.savetxt(filename+'.TvP', TvP)
-    # np.savetxt(filename+'.FvP', FvP)
-    # np.savetxt(filename+'.DMcurve', DMc)
-
-
-def test_known_pulsars():
-    known_pulsars.get_allpulsars()
+    apfd.getdata(intervals=bins).reshape(bins, bins)
+    apfd.getdata(subbands=bins).reshape(bins, bins)
+    apfd.getdata(phasebins=bins)
+    apfd.getdata(DMbins=ndms)
 
 
 """
 def test_quickclf():
     trained_ai_path = ('/').join(ubc_AI.__path__[0].split('/')[:-1])+'/data/trained_AI'
     print(trained_ai_path)
-    
+
     with open(trained_ai_path+'/clfl2_PALFA.pkl','rb') as f:
         classifier = pickle.load(f)
 

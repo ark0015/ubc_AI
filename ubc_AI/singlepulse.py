@@ -1,6 +1,6 @@
 import numpy as np
-import os, sys
 import scipy.stats as stats
+
 import ubc_AI.samples
 
 DM_range_factor = 0.2
@@ -82,7 +82,7 @@ class singlepulse(object):
         usage examples:
 
         """
-        if not "extracted_feature" in self.__dict__:
+        if "extracted_feature" not in self.__dict__:
             self.extracted_feature = {}
         data = self.data
 
@@ -102,7 +102,7 @@ class singlepulse(object):
             feature = "%s:%s" % ("freqbins", M)
             if M == 0:
                 return np.array([])
-            prof = normalize(data).sum(1)
+            normalize(data).sum(1)
             result = normalize(downsample(data, M, align=self.align).ravel())
             self.extracted_feature[feature] = np.array(result)
             return self.extracted_feature[feature]
@@ -111,7 +111,7 @@ class singlepulse(object):
             feature = "%s:%s" % ("timebins", M)
             if M == 0:
                 return np.array([])
-            prof = normalize(data).sum(0)
+            normalize(data).sum(0)
             result = normalize(downsample(data, M, align=self.align).ravel())
             self.extracted_feature[feature] = np.array(result)
             return self.extracted_feature[feature]
@@ -120,7 +120,7 @@ class singlepulse(object):
             feature = "%s:%s" % ("bandpass", M)
             if M == 0:
                 return np.array([])
-            prof = normalize(data).sum(1)
+            normalize(data).sum(1)
             result = normalize(downsample(data, M, align=self.align).ravel())
             self.extracted_feature[feature] = np.array(result)
             return self.extracted_feature[feature]
@@ -157,9 +157,9 @@ class singlepulse(object):
 
         def getratings(L):
             feature = "%s:%s" % ("ratings", L)
-            if L == None:
+            if L is None:
                 return np.array([])
-            if not feature in self.extracted_feature:
+            if feature not in self.extracted_feature:
                 result = []
                 for rating in L:
                     if rating == "duration":
@@ -192,39 +192,38 @@ class SPdata(singlepulse):
     def __init__(self, spfile, align=True, centre=True):
         npzfile = np.load(spfile)
         text_array = npzfile["text_array"]
-        fn = text_array[0]
-        telescope = text_array[1]
-        RA = text_array[2]
-        dec = text_array[3]
-        MJD = float(text_array[4])
+        # fn = text_array[0]
+        # telescope = text_array[1]
+        # RA = text_array[2]
+        # dec = text_array[3]
+        # MJD = float(text_array[4])
         # mjd = Popen(["mjd2cal", "%f"%MJD], stdout=PIPE, stderr=PIPE)
         # date, err = mjd.communicate()
         # date = date.split()[2:5]
         # rank = int(text_array[5])
-        nsub = int(text_array[6])
-        nbins = int(text_array[7])
-        subdm = dm = sweep_dm = float(text_array[8])
-        sigma = float(text_array[9])
-        sample_number = int(text_array[10])
+        # nsub = int(text_array[6])
+        # nbins = int(text_array[7])
+        # subdm = dm = sweep_dm = float(text_array[8])
+        # sigma = float(text_array[9])
+        # sample_number = int(text_array[10])
         duration = float(text_array[11])
-        width_bins = int(text_array[12])
-        pulse_width = float(text_array[13])
-        tsamp = float(text_array[14])
-        Total_observed_time = float(text_array[15])
-        start = float(text_array[16])
-        start = start - 0.25 * duration
-        datastart = float(text_array[17])
-        datasamp = float(text_array[18])
-        datanumspectra = float(text_array[19])
+        # width_bins = int(text_array[12])
+        # pulse_width = float(text_array[13])
+        # tsamp = float(text_array[14])
+        # Total_observed_time = float(text_array[15])
+        # start = float(text_array[16])
+        # start = start - 0.25 * duration
+        # datastart = float(text_array[17])
+        # datasamp = float(text_array[18])
+        # datanumspectra = float(text_array[19])
         min_freq = float(text_array[20])
         max_freq = float(text_array[21])
-        sweep_duration = float(text_array[22])
-        sweeped_start = float(text_array[23])
+        # sweep_duration = float(text_array[22])
+        # sweeped_start = float(text_array[23])
 
-        self.dm = dm
         self.period = duration / 2.0
-        self.ra = RA
-        self.dec = dec
+        self.ra = text_array[2]
+        self.dec = text_array[3]
 
         data = npzfile["Data_dedisp_zerodm"].astype(np.float64)
         row, col = data.shape
@@ -243,5 +242,12 @@ class SPdata(singlepulse):
         # show()
 
         singlepulse.__init__(
-            self, data, dm, self.period, min_freq, max_freq, align=align, centre=centre
+            self,
+            data,
+            self.dm,
+            self.period,
+            min_freq,
+            max_freq,
+            align=align,
+            centre=centre,
         )

@@ -1,16 +1,17 @@
 """
 A moudule for the new datafitter class that works with the new classifier class.
 """
+import os
+import pickle
+
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.random import shuffle
-import pickle
 from scipy import mgrid
-import matplotlib.pyplot as plt
-import os, sys
-from ubc_AI.training import pfddata
+
+from ubc_AI.prepfold import pfddata
 from ubc_AI.psrarchive_reader import ar2data
-from ubc_AI.singlepulse import singlepulse
-from ubc_AI.singlepulse import SPdata
+from ubc_AI.singlepulse import SPdata, singlepulse
 from ubc_AI.threadit import threadit
 
 
@@ -19,10 +20,9 @@ class pfdreader(object):
     A new pfd reader class that only store the link to the file and the extracted data.
     """
 
-    # SearchPATH = "/home/zhuww/work/AI_PFD/training/PFDfiles/pulsars/:/home/zhuww/work/AI_PFD/training/PFDfiles/RFIs/:/home/zhuww/work/AI_PFD/training/PFDfiles/nonpulsars/:/home/zhuww/work/AI_PFD/training/PFDfiles/harmonics/"
-    SearchPATH = os.path.dirname(os.path.abspath(__file__))
-
     def __init__(self, pfdfile):
+        # SearchPATH = "/home/zhuww/work/AI_PFD/training/PFDfiles/pulsars/:/home/zhuww/work/AI_PFD/training/PFDfiles/RFIs/:/home/zhuww/work/AI_PFD/training/PFDfiles/nonpulsars/:/home/zhuww/work/AI_PFD/training/PFDfiles/harmonics/"
+        SearchPATH = os.path.dirname(os.path.abspath(__file__))
         # search for the file
         self.extracted_feature = {}
         if pfdfile.__class__ == pfddata:
@@ -45,7 +45,7 @@ class pfdreader(object):
                     elif os.access(path + pfdfile.split("/")[-1], os.R_OK):
                         self.pfdfile = path + pfdfile.split("/")[-1]
                         break
-                if not "pfdfile" in self.__dict__:
+                if "pfdfile" not in self.__dict__:
                     # print(pfdfile, self.PSRclass, self.DMCclass)
                     raise NameError("did not find the file %s" % pfdfile)
 
@@ -114,7 +114,7 @@ def singleclass_score(classifier, test_pfds, test_target, verbose=False):
     truepulsar = set([])
     pred_prob = classifier.predict_proba(test_pfds)[..., 1]
     pred = np.where(pred_prob > 0.5, 1, 0)
-    if not test_target.ndim == 1:
+    if test_target.ndim != 1:
         try:
             feature_target = test_target[
                 ..., classifier.targetmap[classifier.feature.keys()[0]]
@@ -180,7 +180,7 @@ def cross_validation(classifier, pfds, target, cv=5, verbose=False):
             test_target = target[test_idx]
             if len(np.unique(training_target)) == len(np.unique(target)):
                 inf_loop = False
-        n_samples = len(training_pfds)
+        # n_samples = len(training_pfds)
         # training_pfds = training_pfds.reshape((n_samples, -1))
         # classifier = svm.SVC(gamma=0.1, scale_C=False)
         arglists.append(
@@ -193,7 +193,7 @@ def cross_validation(classifier, pfds, target, cv=5, verbose=False):
         F1 = singleclass_score(clf, test_pfds, test_target, verbose=verbose)
         return F1
 
-    if not nclasses == 2:
+    if nclasses != 2:
         print("not yet implemented multiclass_score")
         # F1 = multiclass_score(classifier, test_pfds, test_target,
         # nclasses = nclasses, verbose=verbose)
@@ -237,7 +237,7 @@ class dataloader(object):
                     or originaldata["target"].ndim == 1
                 ):
                     self.orig_target = originaldata["target"]
-                    if classmap == None:
+                    if not classmap:
                         self.classmap = {0: [4, 5], 1: [6, 7]}
                     else:
                         self.classmap = classmap
@@ -290,7 +290,7 @@ class dataloader(object):
         for clf in AIlist:
             items.extend(clf.feature.items())
         for f in set(items):
-            if not f in self.extracted_feature:
+            if f not in self.extracted_feature:
                 vargf.append(dict([f]))
 
         def getfeature(pfd):
@@ -358,7 +358,7 @@ class dataloader(object):
         train the classifier
         args:; classifier created using the mixin classifier class
         """
-        if not "test_pfds" in self.__dict__ or not "test_target" in self.__dict__:
+        if "test_data" not in self.__dict__ or "test_target" not in self.__dict__:
             self.split()
         self.trainclassifiers[clf] = True
         clf.fit(self.train_pfds, self.train_target)
@@ -423,14 +423,12 @@ class dataloader(object):
 
         args: classifier, feature={'intervals':32}, bounds=[8,32], Npts=10, plot=True, pct=0.6
         """
-        pfds = self.pfds
-        target = self.target
-        if bounds == None:
+        if not bounds:
             vals = mgrid[8 : 32 : 1j * Npts]
         else:
             vals = mgrid[bounds[0] : bounds[1] : 1j * Npts]
 
-        if feature == None:
+        if not feature:
             feature = classifier.feature.keys()[0]
         train_score = np.zeros_like(vals)
         test_score = np.zeros_like(vals)
@@ -461,7 +459,7 @@ class dataloader(object):
         # predict = clf.predict(self.test_pfds)
         target = self.test_target
         Proba = clf.predict_proba(self.test_pfds)
-        if Pcut == None:
+        if not Pcut:
             Pcut = np.arange(0.05, 1.0, 0.05)
         P = []
         R = []
@@ -501,12 +499,12 @@ class dataloader(object):
         if plot == True: show plot
         else: return the indics of the chosen pfds
         """
-        if not "test_pfds" in self.__dict__ or not "test_target" in self.__dict__:
+        if "test_data" not in self.__dict__ or "test_target" not in self.__dict__:
             self.train(clf)
-        elif not clf in self.trainclassifiers:
+        elif clf not in self.trainclassifiers:
             clf.fit(self.train_pfds, self.train_target)
 
-        if feature == None:
+        if not feature:
             self.kwargs = {"intervals": 32}
         else:
             self.kwargs = feature
@@ -594,7 +592,7 @@ class dataloader(object):
         sample_list = list of sample indices of self.pdfs to plot (maximum 64)
         feature: the feature to extract, default is {'intervals':32}
         """
-        if feature == None:
+        if not feature:
             self.kwargs = {"intervals": 32}
         else:
             self.kwargs = feature
@@ -656,7 +654,7 @@ class dataloader(object):
 
         Note: assume pulsar is classed/targetted as '1'
         """
-        if not "test_data" in self.__dict__ or not "test_target" in self.__dict__:
+        if "test_data" not in self.__dict__ or "test_target" not in self.__dict__:
             self.split()
 
         # intersection of all pulsars

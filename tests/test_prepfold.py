@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-import pytest
 import glob
+import os
 
-import ubc_AI
+import pytest
+
 from ubc_AI import prepfold
+
 
 @pytest.fixture
 def pfd_file():
@@ -14,6 +15,7 @@ def pfd_file():
     datadir = os.path.join(testdir, "data")
     pfd_file = glob.glob(datadir + "/*.pfd")[0]
     return pfd_file
+
 
 def test_pfd(pfd_file):
     pfd = prepfold.pfd(pfd_file)
@@ -30,9 +32,11 @@ def test_pfd(pfd_file):
     pfd.calc_varprof()
     pfd.calc_redchi2()
     pfd.estimate_offsignal_redchi2()
-    #pfd.adjust_fold_frequency(phasebins)
+    # pfd.adjust_fold_frequency(phasebins)
     ##pfd.dynamic_spectra(onbins)
 
+
+"""
 def test_pfd_plotting(pfd_file):
     pfd = prepfold.pfd(pfd_file)
     pfd.plot_sumprof()
@@ -40,6 +44,8 @@ def test_pfd_plotting(pfd_file):
     #pfd.plot_chi2_vs_sub()
     #pfd.plot_intervals()
     #pfd.plot_subbands()
+"""
+
 
 def test_pfddata(pfd_file):
     pfddata = prepfold.pfddata(pfd_file)

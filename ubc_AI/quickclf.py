@@ -1,4 +1,7 @@
-import pickle, glob, ubc_AI
+import glob
+import pickle
+
+import ubc_AI
 from ubc_AI.data import pfdreader
 
 AI_PATH = "/".join(ubc_AI.__file__.split("/")[:-1])

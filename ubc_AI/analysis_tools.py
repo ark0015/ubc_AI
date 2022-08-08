@@ -2,9 +2,10 @@
 Some routines that may be useful in analyzing the prediction performance.
 
 """
+from itertools import cycle
+
 import numpy as np
 import pylab as plt
-from itertools import cycle
 from scipy import mgrid
 
 lines = ["-", ":", "-.", "--", "_"]

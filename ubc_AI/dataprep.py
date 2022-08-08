@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-from ubc_AI.prepfold import pfd
+import sys
+
 import numpy as np
 import scipy
-import sys, os
 
+from ubc_AI.prepfold import pfd
 
 if __name__ == "__main__":
     f1 = sys.argv[1]

@@ -1,6 +1,6 @@
 """
 Aaron Berndsen:
-A Conformal Neural Network using Theano for computation and structure, 
+A Conformal Neural Network using Theano for computation and structure,
 but built to obey sklearn's basic 'fit' 'predict' functionality
 
 *code largely motivated from deeplearning.net examples
@@ -10,17 +10,16 @@ You'll require theano and libblas-dev
 
 tips/tricks/notes:
 * if training set is large (>O(100)) and redundant, use stochastic gradient descent (batch_size=1), otherwise use conjugate descent (batch_size > 1)
-*  
+*
 """
-import pickle
-import logging
-import numpy as np
-from collections import OrderedDict
 import datetime
+import os
+import pickle
 
-import tensorflow as tf
-from tensorflow.keras import layers, models
+import numpy as np
+# import tensorflow as tf
 from sklearn.base import BaseEstimator
+from tensorflow.keras import layers, models
 
 """
 import theano
@@ -91,8 +90,8 @@ class CNN(BaseEstimator):
         self.batch_size = kwargs.get("batch_size", 25)
         self.L1_reg = kwargs.get("L1_reg", 0.00)
         self.L2_reg = kwargs.get("L2_reg", 0.00)
-        ### Note, n_in and n_out are actually set in
-        ### .fit, they are here to help pickle
+        # Note, n_in and n_out are actually set in
+        # .fit, they are here to help pickle
         self.n_in = kwargs.get("n_in", 50)
         self.n_out = kwargs.get("n_out", 2)
 
@@ -143,7 +142,7 @@ class CNN(BaseEstimator):
             fil1y = nim[1]
 
         # Don't think we need this
-        rng = np.random.RandomState(23455)
+        # rng = np.random.RandomState(23455)
 
         # Model init
         self.model = models.Sequential()
@@ -178,7 +177,7 @@ class CNN(BaseEstimator):
         # 4D output tensor is thus of shape (nkerns[0],nkerns[1],y,y)
         poox = (nx - fil1x + 1) / self.pool_size[0][0]
         pooy = (ny - fil1y + 1) / self.pool_size[0][1]
-        nconf = kernel_size[1]
+        nconf = self.kernel_size[1]
         if isinstance(nconf, int):
             fil2x = nconf
             fil2y = nconf
@@ -313,7 +312,7 @@ class CNN(BaseEstimator):
         self.n_in = int(np.sqrt(train_data.shape[1]))
         self.n_out = len(np.unique(train_labels))
 
-        self.trained_model = model.fit(
+        self.trained_model = self.model.fit(
             train_data,
             train_labels,
             epochs=self.n_epochs,
@@ -390,15 +389,15 @@ class CNN(BaseEstimator):
 
         return np.vstack(preds)
 
-    def mse(self, y):
-        # error between output and target
-        return T.mean((self.y_pred - y) ** 2)
+        # def mse(self, y):
+        #    # error between output and target
+        #    return T.mean((self.y_pred - y) ** 2)
 
-    def nll_binary(self, y):
-        # negative log likelihood based on binary cross entropy error
-        return T.mean(T.nnet.binary_crossentropy(self.p_y_given_x, y))
+        # def nll_binary(self, y):
+        #    # negative log likelihood based on binary cross entropy error
+        #    return T.mean(T.nnet.binary_crossentropy(self.p_y_given_x, y))
 
-    def nll_multiclass(self, y):
+        # def nll_multiclass(self, y):
         """negative log likelihood based on multiclass cross entropy error
         Notes
         -----
@@ -409,7 +408,8 @@ class CNN(BaseEstimator):
         LP[n-1,y[n-1]]] and T.mean(LP[T.arange(y.shape[0]),y]) is the mean (across minibatch examples) of the
             elements in v, i.e., the mean log-likelihood across the minibatch.
         """
-        return -T.mean(T.log(self.p_y_given_x)[T.arange(y.shape[0]), y])
+
+    #    return -T.mean(T.log(self.p_y_given_x)[T.arange(y.shape[0]), y])
 
     def errors(self, y):
         """Return a float representing the number of errors in the sequence
@@ -427,27 +427,27 @@ class CNN(BaseEstimator):
                 ("y", y.type, "y_pred", self.y_pred.type),
             )
 
-        if self.output_type in ("binary", "softmax"):
-            # check if y is of the correct datatype
-            if y.dtype.startswith("int"):
-                # the T.neq operator returns a vector of 0s and 1s, where 1
-                # represents a mistake in prediction
-                return T.mean(T.neq(self.y_pred, y))
-            else:
-                raise NotImplementedError
+        # if self.output_type in ("binary", "softmax"):
+        #    # check if y is of the correct datatype
+        #    if y.dtype.startswith("int"):
+        #        # the T.neq operator returns a vector of 0s and 1s, where 1
+        #        # represents a mistake in prediction
+        #        return T.mean(T.neq(self.y_pred, y))
+        #    else:
+        #        raise NotImplementedError
 
-    def shared_dataset(self, data_xy):
-        """Load the dataset into shared variables"""
+    # def shared_dataset(self, data_xy):
+    #    """Load the dataset into shared variables"""
 
-        data_x, data_y = data_xy
-        shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
+    #    data_x, data_y = data_xy
+    # shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
 
-        shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
+    #    #shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
 
-        if self.output_type in ("binary", "softmax"):
-            return shared_x, T.cast(shared_y, "int32")
-        else:
-            return shared_x, shared_y
+    #    if self.output_type in ("binary", "softmax"):
+    #        return shared_x, T.cast(shared_y, "int32")
+    #    else:
+    #        return shared_x, shared_y
 
     def __getstate__(self):
         """Return state sequence."""
@@ -528,7 +528,7 @@ class CNN(BaseEstimator):
 
         fabspath = os.path.join(fpath, fname)
 
-        logger.info("Saving to %s ..." % fabspath)
+        # logger.info("Saving to %s ..." % fabspath)
         file = open(fabspath, "wb")
         state = self.__getstate__()
         pickle.dump(state, file, protocol=pickle.HIGHEST_PROTOCOL)
@@ -536,7 +536,7 @@ class CNN(BaseEstimator):
 
     def load(self, path):
         """Load model parameters from path."""
-        logger.info("Loading from %s ..." % path)
+        # logger.info("Loading from %s ..." % path)
         file = open(path, "rb")
         state = pickle.load(file)
         self.__setstate__(state)
