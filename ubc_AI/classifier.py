@@ -1,4 +1,4 @@
-import multiprocessing as MP
+import pathos.multiprocessing as MP
 import pickle
 import sys
 
@@ -13,15 +13,16 @@ from sklearn.ensemble import GradientBoostingClassifier as GBC
 import ubc_AI
 from ubc_AI import TF_cnn as tfcnn
 from ubc_AI import pulsar_nnetwork as pnn
+
 # multiprocess only works in non-interactive mode:
 from ubc_AI.threadit import threadit
 from ubc_AI.training import split_data
 
 if hasattr(MAIN, "__file__"):
     InteractivePy = False
-    # print("Yeah!!! we are running with multiprocessing!")
+    # print("Yeah!!! we are running with pathos.multiprocessing!")
 else:
-    print("running in interactive python mode, multiprocessing disabled")
+    print("running in interactive python mode, pathos.multiprocessing disabled")
     InteractivePy = True
 
 num_workers = max(1, MP.cpu_count() - 1)
@@ -156,7 +157,8 @@ class combinedAI(object):
             return clf
 
         if not InteractivePy:
-            resultdict = threadit(threadfit, input_data)
+            # resultdict = threadit(threadfit, input_data)
+            resultdict = threadfit(input_data)
 
             for n, clf in resultdict.items():
                 self.list_of_AIs[n] = clf
@@ -429,6 +431,8 @@ class classifier(object):
         "DMbins": 2,
         "intervals": 3,
         "subbands": 4,
+        # "timebins": 5, # Addition
+        # "freqbins": 6, # Addition
     }
 
     def __init__(self, feature=None, use_pca=False, n_comp=12, **kwargs):
@@ -501,7 +505,9 @@ class classifier(object):
             if target.ndim == 1:
                 mytarget = target
             else:
-                mytarget = target[..., classifier.targetmap[self.feature.keys()[0]]]
+                mytarget = target[
+                    ..., classifier.targetmap[[x for x in self.feature.keys()][0]]
+                ]
 
             if self.use_pca:
                 self.pca = PCA(n_components=self.n_components).fit(data[mytarget == 1])
@@ -884,30 +890,20 @@ def extractfeatures(AIlist, pfds):
     """
 
     # determine features to extract from pfd
-    features = {}
-    vargf = [{"ratings": ["period"]}]  # auto extract P0
-    items = []
+    feature_dict = {}
+    feature_dict["ratings"] = ["period"]  # auto extract P0
+
     for clf in AIlist:
-        items.extend(clf.feature.items())
+        feature_dict.update(clf.feature.items())
 
-    newf = set(["%s:%s" % (f, v) for f, v in items]) - set(
-        pfds[0].extracted_feature.keys()
-    )
-    for p in newf:
-        f, v = p.split(":")
-        vargf.append({f: int(v)})
-    if len(vargf) > 0:
-
-        def getfeature(pfd):
-            pfd.getdata(*vargf, **features)
-            return pfd
-
-        resultdict = threadit(getfeature, [[p] for p in pfds])
-        for n, pfd in resultdict.items():
-            if pfd is None:
-                print("ZeroDivisionError: ", pfds[n].pfdfile)
-                raise ZeroDivisionError
+    resultdict = {}
+    for pfd_idx, pfd in enumerate(pfds):
+        resultdict[pfd_idx] = pfd.getdata(feature_dict)
+    for n, pfd in resultdict.items():
+        if pfd:
             pfds[n] = pfd
+        else:
+            raise ZeroDivisionError("ZeroDivisionError: ", pfds[n].pfdfile)
 
 
 def threadpredict(AIlist, pfds):

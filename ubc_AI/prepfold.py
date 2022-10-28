@@ -998,7 +998,7 @@ class pfddata(pfd):
         # pfddata.__counter__[0] += 1
         # print(pfddata.__counter__)
         # print('file initialization No.:', pfddata.__counter__[0])
-        if "subdelays" not in self.__dict__.keys():
+        if hasattr(self, "subdelays"):
             self.extracted_feature = {}
         self.extracted_feature.update({"ratings:['period']": np.array([self.topo_p1])})
 

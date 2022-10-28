@@ -49,62 +49,39 @@ class pfdreader(object):
                     # print(pfdfile, self.PSRclass, self.DMCclass)
                     raise NameError("did not find the file %s" % pfdfile)
 
-    def getdata(self, *fargs, **features):
-        pfd = None
-
-        def extract(key, value, pfd):
-            feature = "%s:%s" % (key, value)
-            if feature in self.extracted_feature:
-                # print('use extracted feature %s' % feature)
-                newdata = self.extracted_feature[feature]
-            else:
-                # print('extracting new feature %' % feature)
-                newdata = pfd.getdata(**{key: value})
-                self.extracted_feature.update({feature: newdata})
-            return newdata
+    def getdata(self, feature_dict):
+        """extract data from each feature in feature_dict"""
 
         data = np.array([])
         # process the args (a list of single-item dictionaries)
-        for i in fargs:
-            key, value = i.items()[0]
-            feature = "%s:%s" % (key, value)
-            if (feature not in self.extracted_feature) and (pfd is None):
-                if (
-                    not type(self.pfdfile) is str
-                    and self.pfdfile.__class__ == singlepulse
-                ):
-                    pfd = self.pfdfile
-                elif os.path.splitext(self.pfdfile)[1] == ".pfd":
-                    pfd = pfddata(self.pfdfile, align=True)
-                elif os.path.splitext(self.pfdfile)[1] == ".ar2":
-                    pfd = ar2data(self.pfdfile, align=True)
-                elif os.path.splitext(self.pfdfile)[1] == ".ar":
-                    pfd = ar2data(self.pfdfile, align=True)
-                elif os.path.splitext(self.pfdfile)[1] == ".spd":
-                    pfd = SPdata(self.pfdfile, align=True)
-                else:
-                    raise TypeError("unrecognized file format ", self.pfdfile)
-            data = np.append(data, extract(key, value, pfd))
-        # process the kwargs
-        for key, value in features.items():
-            feature = "%s:%s" % (key, value)
-            if (feature not in self.extracted_feature) and (pfd is None):
-                if (
-                    not type(self.pfdfile) is str
-                    and self.pfdfile.__class__ == singlepulse
-                ):
-                    pfd = self.pfdfile
-                elif os.path.splitext(self.pfdfile)[1] == ".pfd":
-                    pfd = pfddata(self.pfdfile, align=True)
-                elif os.path.splitext(self.pfdfile)[1] == ".ar2":
-                    pfd = ar2data(self.pfdfile, align=True)
-                elif os.path.splitext(self.pfdfile)[1] == ".ar":
-                    pfd = ar2data(self.pfdfile, align=True)
-                elif os.path.splitext(self.pfdfile)[1] == ".spd":
-                    pfd = SPdata(self.pfdfile, align=True)
-                else:
-                    raise TypeError("unrecognized file format ", self.pfdfile)
-            data = np.append(data, extract(key, value, pfd))
+        pfd = None
+        data = []
+        for key, value in feature_dict.items():
+            # key, value = i.items()[0]
+            # feature = "%s:%s" % (key, value)
+            if f"{(key,value)}" not in self.extracted_feature:
+                if not pfd:
+                    if (
+                        not type(self.pfdfile) is str
+                        and self.pfdfile.__class__ == singlepulse
+                    ):
+                        pfd = self.pfdfile
+                    elif os.path.splitext(self.pfdfile)[1] == ".pfd":
+                        pfd = pfddata(self.pfdfile, align=True)
+                    elif os.path.splitext(self.pfdfile)[1] == ".ar2":
+                        pfd = ar2data(self.pfdfile, align=True)
+                    elif os.path.splitext(self.pfdfile)[1] == ".ar":
+                        pfd = ar2data(self.pfdfile, align=True)
+                    elif os.path.splitext(self.pfdfile)[1] == ".spd":
+                        pfd = SPdata(self.pfdfile, align=True)
+                    else:
+                        raise TypeError("unrecognized file format ", self.pfdfile)
+                newdata = pfd.getdata(**{key: value})
+                self.extracted_feature.update({f"{key,value}": newdata})
+            else:
+                newdata = self.extracted_feature[f"{key,value}"]
+            data.append(newdata)
+
         del pfd
         return data
 
@@ -250,17 +227,18 @@ class dataloader(object):
         elif filename.endswith(".txt"):
             data = np.loadtxt(
                 filename,
+                usecols=[1, 2, 3, 4, 5],
+                comments="#",
                 dtype=[
-                    ("fname", "|S200"),
                     ("Overall", int),
                     ("Profile", int),
                     ("Interval", int),
                     ("Subband", int),
                     ("DMCurve", int),
                 ],
-                comments="#",
             )
-            self.pfds = [pfdreader(f) for f in data["fname"]]
+            pfdfiles = np.loadtxt(filename, usecols=[0], comments="#", dtype=str)
+            self.pfds = [pfdreader(f) for f in pfdfiles]
             self.target = np.vstack(
                 (
                     data["Overall"],
@@ -275,6 +253,8 @@ class dataloader(object):
             raise NameError("Don't recognize the file surfix.")
         self.extracted_feature = []
 
+    """
+    # Should use extract features in classifier instead
     def extractfeatures(self, clf):
         if type(clf) == list:
             AIlist = clf
@@ -303,6 +283,7 @@ class dataloader(object):
                 self.pfds[n] = pfd
         for f in vargf:
             self.extracted_feature.append(f)
+    """
 
     def update_classmap(self, classmap):
         """
@@ -358,7 +339,7 @@ class dataloader(object):
         train the classifier
         args:; classifier created using the mixin classifier class
         """
-        if "test_data" not in self.__dict__ or "test_target" not in self.__dict__:
+        if not hasattr(self, "test_data") or not hasattr(self, "test_target"):
             self.split()
         self.trainclassifiers[clf] = True
         clf.fit(self.train_pfds, self.train_target)

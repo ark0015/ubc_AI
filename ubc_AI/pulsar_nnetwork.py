@@ -1179,91 +1179,9 @@ class handwritingpix(object):
 
 
 # Utility Functions
-"""
-def feature_curve(feature, originaldata, bounds=None, Npts=10, plot=False, pct=0.4):
-    # returns the training and cross validation set errors
-    # for a range of sizes of a given feature.
-    # (good for diagnosing overfitting or underfitting/
-    # high bias or high variance)
-
-    # Args:
-    # classifier:  classifier
-    # feature : string, name of the given feature
-    # (e.g. phasebins, intervals)
-    # originaldata : the original data loaded from pickled file, have ['pfds']
-    # and ['target']
-    # bounds : the range of feature sizes to explore
-    # plot : whether or not to plot the scores
-    # Npts : plot Npts points
-    # pct (0<pct<1) : split the data as "pct" training, 1-pct testing
-    #               only if Xval = None
-    #               default pct = 0.6
-    # plot : False/[True] optionally plot the learning curve
-
-    # Note: if Xval is None, then we assume (X,y) is the entire set of data,
-    #       and we split them up using split_data(data,target)
-
-    # returns three vectors of length(ntrials):
-    # train_score: training error for the N=length(pct*X)
-    # test_score: error on x-val data, when trainined on "i" samples
-    # ntrials
-
-    # vals = values of feature sizes (e.g. 8 -- 32)
-
-    # notes:
-    # * a high error indicates lots of bias,
-    #   that you are probably underfitting the problem
-    #   (so add more neurons/layers, or lower regularization)
-
-    # * for lots of trials, a high gap between training_error
-    #   and test_error (x-val error) indicates lots of variance
-    #   (you are over-fitting, so remove some neurons/layers,
-    #   or increase the regularization parameter)
-
-    pfds = originaldata["pfds"]
-    target = originaldata["target"]
-    classdict = {0: [4, 5], 1: [6, 7]}
-    for k, v in classdict.items():
-        for val in v:
-            target[target == val] = k
-
-    if bounds is None:
-        vals = mgrid[8 : 32 : 1j * Npts]
-    else:
-        vals = mgrid[bounds[0] : bounds[1] : 1j * Npts]
-
-    kws = {"phasebins": 0}
-    train_score = np.zeros_like(vals)
-    test_score = np.zeros_like(vals)
-    for i, val in enumerate(vals):
-        kws[feature] = int(val)
-        data = [pf.getdata(**kws) for pf in pfds]
-        train_data, train_target, test_data, test_target = split_data(
-            data, target, pct=pct
-        )
-        # classifier = create_NN(train_data, train_target, ninternal=[9], gamma=0.00025)
-        print(
-            "\nfeature idx, size, data_shape: %s, %s, %s"
-            % (i, int(val), train_data.shape)
-        )
-
-        # classifier.fit(train_data, train_target, maxiter=2222, raninit=True)
-        # record erro
-        # train_score[i] = 1 - classifier.score(train_data, train_target)
-        # test_score[i] = 1 - classifier.score(test_data, test_target)
-    if plot:
-        plt.plot(vals, train_score, "r+", label="training")
-        plt.plot(vals, test_score, "bx", label="x-val")
-        plt.xlabel(feature)
-        plt.ylabel("error")
-        plt.legend()
-        plt.show()
-    return train_score, test_score, vals, vals[test_score.argmax()]
-
-"""
 
 
-def labels2vectors(y, Nclass=1):
+def labels2vectors(y, Nclass=None):
     """
     given a vector of [nsamples] where the i'th entry is label/classification
     for the i'th sample, return an array [nlabels,nsamples],
@@ -1296,11 +1214,18 @@ def labels2vectors(y, Nclass=1):
     else:
         yy = np.zeros((nclass, N), dtype=np.uint8)
 
+    """
+    # Old Method
     for yi, yv in enumerate(y):
         if N == 1:
             yy[yv] = 1
         else:
-            yy[yv, yi] = 1
+            yy[yv][yi] = 1
+    """
+    for nc in range(nclass):
+        for yi, yv in enumerate(y):
+            yy[nc][yi] = yv
+
     return yy
 
 
@@ -1318,43 +1243,6 @@ def sigmoidGradient(z):
 
     """
     return sigmoid(z) * (1 - sigmoid(z))
-
-
-def split_data(data, target, pct=0.6):
-    """
-    Given some complete set of data and their targets,
-    split the indices into 'pct' training, '1-pct' cross-vals
-
-    Args:
-    data = input data
-    target = data classifications
-    pct = 0 < pct < 1, default 0.6
-
-    returns:
-    training_data, training_target, test_data, test_target
-
-    """
-    if isinstance(data, type([])):
-        data = np.array(data)
-
-    L = len(target)
-    index = range(L)
-    cut = int(pct * L)
-    while 1:
-        shuffle(index)
-        training_idx = index[:cut]
-        training_target = target[training_idx]
-        training_data = data[training_idx]
-
-        test_idx = index[cut:]
-        test_target = target[test_idx]
-        test_data = data[test_idx]
-
-        # make sure training has samples from all classes
-        if len(np.unique(training_target)) == len(np.unique(target)):
-            break
-
-    return training_data, training_target, test_data, test_target
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ import os
 import pickle
 
 import numpy as np
-# import tensorflow as tf
+import tensorflow as tf
 from sklearn.base import BaseEstimator
 from tensorflow.keras import layers, models
 
@@ -92,10 +92,10 @@ class CNN(BaseEstimator):
         self.L2_reg = kwargs.get("L2_reg", 0.00)
         # Note, n_in and n_out are actually set in
         # .fit, they are here to help pickle
-        self.n_in = kwargs.get("n_in", 50)
-        self.n_out = kwargs.get("n_out", 2)
+        # self.n_in = kwargs.get("n_in", 50)
+        # self.n_out = kwargs.get("n_out", 2)
 
-        self.setup_model()
+        # self.setup_model()
 
     def setup_model(self):
         """
@@ -151,15 +151,39 @@ class CNN(BaseEstimator):
         # I think I have to change this to TF
         ####################################
         # filters? kernel_size? activation?
+
+        # input_shape_1 = (self.batch_size, nx, ny, 1)
+        input_shape_1 = (nx, ny, 1)
+        kernel_size_1 = (fil1x, fil1y)
+
+        # print(vars(self))
+        # print("input_shape:", input_shape_1)
+        # print("batch_size:", self.batch_size)
+        # print("kernel_size:", self.kernel_size)
+        # print("kernel_size_1:", kernel_size_1)
+        # print("poolsize:", self.pool_size)
+        # print("nkerns:", self.nkerns)
+
         self.model.add(
             layers.Conv2D(
-                self.batch_size,
-                self.kernel_size,
+                filters=self.nkerns[0],
+                # self.batch_size,
+                # kernel_size=self.kernel_size,
+                kernel_size=kernel_size_1,
                 activation=self.activation,
-                input_shape=(self.batch_size, 1, nx, ny),
+                input_shape=input_shape_1,
+                # data_format="channels_first",
+                padding="same",
             )
         )
-        self.model.add(layers.MaxPooling2D(self.pool_size[0]))
+        # print("1")
+        # print(self.model.summary())
+        self.model.add(
+            layers.MaxPooling2D(
+                pool_size=self.pool_size[0],
+                # data_format="channels_first"
+            )
+        )
         """
         self.layer0 = LeNetConvPoolLayer(
             rng,
@@ -185,19 +209,26 @@ class CNN(BaseEstimator):
             fil2x = nconf[0]
             fil2y = nconf[1]
 
+        input_shape_2 = (poox, pooy, 1)
+        kernel_size_2 = (fil2x, fil2y)
         ####################################
         # I think I have to change this to TF
         ####################################
         # filters? kernel_size? activation?
         self.model.add(
             layers.Conv2D(
-                self.batch_size,
-                self.kernel_size,
+                filters=self.nkerns[1],
+                kernel_size=kernel_size_2,
                 activation=self.activation,
-                input_shape=(self.batch_size, self.nkerns[0], poox, pooy),
+                input_shape=input_shape_2,
+                padding="same",
             )
         )
-        self.model.add(layers.MaxPooling2D(self.pool_size[1]))
+        self.model.add(layers.MaxPooling2D(pool_size=self.pool_size[1]))
+
+        # print("2")
+        # print(self.model.summary())
+
         """
         self.layer1 = LeNetConvPoolLayer(
             rng,
@@ -298,26 +329,54 @@ class CNN(BaseEstimator):
     ):
         """Fit model
 
-        Pass in X_test, Y_test to compute test error and report during
+        Pass in test_data, test_labels to compute test error and report during
         training.
 
-        train_data : ndarray (T x n_in)
-        train_labels : ndarray (T x n_out)
-        test_data : ndarray (T x n_in)
-        test_labels : ndarray (T x n_out)
+        train_data : ndarray (N_pfds x n_in)
+        train_labels : ndarray (N_pfds x n_out)
+        test_data : ndarray (N_pfds x n_in)
+        test_labels : ndarray (N_pfds x n_out)
 
-        n_epochs : None (used to override self.n_epochs from init.
+        n_epochs : int, used to override self.n_epochs from init.
         """
         # prepare the CNN
+        if not isinstance(train_data, np.ndarray):
+            train_data = np.asarray(train_data)
+        else:
+            print(type(train_data))
+
+        print("data shape", np.shape(train_data))
+        print("data", train_data)
+        print("sub data shape", np.shape(train_data[0]))
+        print("label shape", np.shape(train_labels))
+        print("labels", train_labels)
         self.n_in = int(np.sqrt(train_data.shape[1]))
         self.n_out = len(np.unique(train_labels))
 
-        self.trained_model = self.model.fit(
-            train_data,
-            train_labels,
-            epochs=self.n_epochs,
-            validation_data=(test_data, test_labels),
+        print("n_in", self.n_in, "n_out", self.n_out)
+        reshaped_train_data = np.reshape(
+            train_data, (train_data.shape[0], self.n_in, self.n_in)
         )
+        print(np.shape(reshaped_train_data))
+
+        self.setup_model()
+
+        if n_epochs:
+            self.n_epochs = n_epochs
+
+        if test_data and test_labels:
+            self.trained_model = self.model.fit(
+                reshaped_train_data,
+                train_labels,
+                epochs=self.n_epochs,
+                validation_data=(test_data, test_labels),
+            )
+        else:
+            self.trained_model = self.model.fit(
+                reshaped_train_data,
+                train_labels,
+                epochs=self.n_epochs,
+            )
 
     def predict(self, data):
         """

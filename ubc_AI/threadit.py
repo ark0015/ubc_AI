@@ -5,6 +5,7 @@ by Weiwei Zhu
 June 2013
 """
 import multiprocessing as MP
+import pathos.multiprocessing as pMP
 import sys
 import traceback
 
