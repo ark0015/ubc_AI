@@ -1014,17 +1014,7 @@ class pfddata(pfd):
         else:
             self.align = 0
 
-    def getdata(
-        self,
-        phasebins=0,
-        freqbins=0,
-        timebins=0,
-        DMbins=0,
-        intervals=0,
-        subbands=0,
-        bandpass=0,
-        ratings=None,
-    ):
+    def getdata(self, **kwargs):
         """
         input: feature=feature_size
         possible features:
@@ -1038,6 +1028,15 @@ class pfddata(pfd):
         usage examples:
 
         """
+        phasebins = kwargs.get("phasebins", 0)
+        freqbins = kwargs.get("freqbins", 0)
+        timebins = kwargs.get("timebins", 0)
+        DMbins = kwargs.get("DMbins", 0)
+        intervals = kwargs.get("intervals", 0)
+        subbands = kwargs.get("subbands", 0)
+        bandpass = kwargs.get("bandpass", 0)
+        ratings = kwargs.get("ratings", None)
+
         if "subdelays" not in self.__dict__.keys():
             self.extracted_feature = {}
 
@@ -1053,6 +1052,7 @@ class pfddata(pfd):
                 self.getratings(ratings),
             )
         )
+
         return data
 
     def getsumprofs(self, M):

@@ -315,13 +315,15 @@ def split_data(data, target, pct=0.6):
     training_data, training_target, test_data, test_target
 
     """
-    if isinstance(data, type([])):
+    if isinstance(data, list):
         data = np.array(data)
 
     L = len(target)
-    index = range(L)
+    index = np.array(range(L))
     cut = int(pct * L)
-    while 1:
+    training_target = []
+    # make sure training has samples from all classes
+    while len(np.unique(training_target)) != len(np.unique(target)):
         shuffle(index)
         training_idx = index[:cut]
         training_target = target[training_idx]
@@ -330,10 +332,6 @@ def split_data(data, target, pct=0.6):
         test_idx = index[cut:]
         test_target = target[test_idx]
         test_data = data[test_idx]
-
-        # make sure training has samples from all classes
-        if len(np.unique(training_target)) == len(np.unique(target)):
-            break
 
     return training_data, training_target, test_data, test_target
 

@@ -27,20 +27,19 @@ def pfd_data():
     """
     test_files = glob.glob(datadir + "/*.pfd")
     save_array = []
-    for tf in test_files:
-        save_array.append([tf, 1, 1, 1, 1, 1])
+    for i, tf in enumerate(test_files):
+        if i < 5:
+            save_array.append([tf, 0, 0, 0, 0, 0])
+        else:
+            save_array.append([tf, 1, 1, 1, 1, 1])
     np.savetxt(datadir + "/Testing.txt", save_array, fmt="%s", delimiter=" ")
     return dataloader(datadir + "/Testing.txt")
 
 
-"""
+
 def test_CNN(pfd_data):
     cnn = TF_cnn.CNN()
     # cnn.fit(pfd_data.pfds, pfd_data.target)
-
-
-# def test_metaCNN():
-#   tmCNN = TF_cnn.MetaCNN()
 
 
 def test_pnnclf(pfd_data):
@@ -131,8 +130,6 @@ def test_dtreeclf():
         min_samples_split=8, min_samples_leaf=4, feature={"DMbins": 60}
     )
 
-"""
-
 
 def test_combined_AI(pfd_data):
     nn1 = classifier.pnnclf(
@@ -177,7 +174,7 @@ def test_combined_AI(pfd_data):
         C=5,
         feature={"intervals": 64},
         use_pca=True,
-        n_comp=24,
+        n_comp=18,
         probability=True,
     )
     clf3 = classifier.svmclf(
@@ -185,7 +182,7 @@ def test_combined_AI(pfd_data):
         C=24.0,
         feature={"subbands": 64},
         use_pca=True,
-        n_comp=24,
+        n_comp=17,
         probability=True,
     )
     clf4 = classifier.svmclf(

@@ -21,21 +21,6 @@ import tensorflow as tf
 from sklearn.base import BaseEstimator
 from tensorflow.keras import layers, models
 
-"""
-import theano
-import theano.tensor as T
-from theano.tensor.signal import downsample
-from theano.tensor.nnet import conv
-import logging
-
-_logger = logging.getLogger("theano.gof.compilelock")
-_logger.setLevel(logging.WARN)
-logger = logging.getLogger(__name__)
-
-mode = theano.Mode(linker="cvm")
-# mode = 'DEBUG_MODE'
-"""
-
 
 class CNN(BaseEstimator):
     """
@@ -317,7 +302,7 @@ class CNN(BaseEstimator):
         z : float
 
         """
-        return np.mean(self.predict(X) == y)
+        return np.mean(self.model.predict(X) == y)
 
     def fit(
         self,
@@ -385,6 +370,7 @@ class CNN(BaseEstimator):
         pad as necessary.
 
         """
+        """
         if isinstance(data, list):
             data = np.array(data)
         if data.ndim == 1:
@@ -396,7 +382,7 @@ class CNN(BaseEstimator):
         if n_batches > 0:
             preds = [
                 list(
-                    self.predict_wrap(
+                    self.model.predict(
                         data[i * self.batch_size : (i + 1) * self.batch_size]
                     )
                 )
@@ -409,9 +395,12 @@ class CNN(BaseEstimator):
             z[0:n_rem] = data[
                 n_batches * self.batch_size : n_batches * self.batch_size + n_rem
             ]
-            preds.append(self.predict_wrap(z)[0:n_rem])
+            preds.append(self.model.predict(z)[0:n_rem])
 
         return np.hstack(preds).flatten()
+        """
+        print("Not implemented")
+        return None
 
     def predict_proba(self, data):
         """
@@ -420,6 +409,7 @@ class CNN(BaseEstimator):
         pad as necessary.
 
         """
+        """
         if isinstance(data, list):
             data = np.array(data)
         if data.ndim == 1:
@@ -431,7 +421,7 @@ class CNN(BaseEstimator):
         if n_batches > 0:
             preds = [
                 list(
-                    self.predict_proba_wrap(
+                    self.model.predict(
                         data[i * self.batch_size : (i + 1) * self.batch_size]
                     )
                 )
@@ -444,31 +434,12 @@ class CNN(BaseEstimator):
             z[0:n_rem] = data[
                 n_batches * self.batch_size : n_batches * self.batch_size + n_rem
             ]
-            preds.append(self.predict_proba_wrap(z)[0:n_rem])
+            preds.append(self.model.predict(z)[0:n_rem])
 
         return np.vstack(preds)
-
-        # def mse(self, y):
-        #    # error between output and target
-        #    return T.mean((self.y_pred - y) ** 2)
-
-        # def nll_binary(self, y):
-        #    # negative log likelihood based on binary cross entropy error
-        #    return T.mean(T.nnet.binary_crossentropy(self.p_y_given_x, y))
-
-        # def nll_multiclass(self, y):
-        """negative log likelihood based on multiclass cross entropy error
-        Notes
-        -----
-        y.shape[0] is (symbolically) the number of rows in y, i.e., number of time steps (call it T) in the sequence
-        T.arange(y.shape[0]) is a symbolic vector which will contain [0,1,2,... n-1] T.log(self.p_y_given_x) is a
-            matrix of Log-Probabilities (call it LP) with one row per example and one column per class
-        LP[T.arange(y.shape[0]),y] is a vector v containing [LP[0,y[0]], LP[1,y[1]], LP[2,y[2]], ...,
-        LP[n-1,y[n-1]]] and T.mean(LP[T.arange(y.shape[0]),y]) is the mean (across minibatch examples) of the
-            elements in v, i.e., the mean log-likelihood across the minibatch.
         """
-
-    #    return -T.mean(T.log(self.p_y_given_x)[T.arange(y.shape[0]), y])
+        print("Not implemented")
+        return None
 
     def errors(self, y):
         """Return a float representing the number of errors in the sequence
@@ -479,38 +450,20 @@ class CNN(BaseEstimator):
         :param y: corresponds to a vector that gives for each example the
                   correct label
         """
+        """
         # check if y has same dimension of y_pred
         if y.ndim != self.y_out.ndim:
             raise TypeError(
                 "y should have the same shape as self.y_out",
                 ("y", y.type, "y_pred", self.y_pred.type),
             )
-
-        # if self.output_type in ("binary", "softmax"):
-        #    # check if y is of the correct datatype
-        #    if y.dtype.startswith("int"):
-        #        # the T.neq operator returns a vector of 0s and 1s, where 1
-        #        # represents a mistake in prediction
-        #        return T.mean(T.neq(self.y_pred, y))
-        #    else:
-        #        raise NotImplementedError
-
-    # def shared_dataset(self, data_xy):
-    #    """Load the dataset into shared variables"""
-
-    #    data_x, data_y = data_xy
-    # shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX))
-
-    #    #shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX))
-
-    #    if self.output_type in ("binary", "softmax"):
-    #        return shared_x, T.cast(shared_y, "int32")
-    #    else:
-    #        return shared_x, shared_y
+        """
+        print("Not implemented")
+        return None
 
     def __getstate__(self):
         """Return state sequence."""
-
+        """
         # check if we're using ubc_AI.classifier wrapper,
         # adding it's params to the state
         if hasattr(self, "orig_class"):
@@ -531,6 +484,9 @@ class CNN(BaseEstimator):
             weights = []
         state = (params, weights)
         return state
+        """
+        print("Not implemented")
+        return None
 
     def _set_weights(self, weights):
         """Set fittable parameters from weights sequence.
@@ -538,16 +494,21 @@ class CNN(BaseEstimator):
         Parameters must be in the order defined by self.params:
             W, W_in, W_out, h0, bh, by
         """
+        """
         i = iter(weights)
         if hasattr(self, "cnn"):
             for param in self.cnn.params:
                 param.set_value(i.next())
+        """
+        print("Not implemented")
+        return None
 
     def __setstate__(self, state):
         """Set parameters from state sequence.
 
         Parameters must be in the order defined by self.params:
             W, W_in, W_out, h0, bh, by
+        """
         """
         params, weights = state
         # we may have several classes or superclasses
@@ -570,9 +531,13 @@ class CNN(BaseEstimator):
             self.set_params(**params)
             self.ready()
             self._set_weights(weights)
+        """
+        print("Not implemented")
+        return None
 
     def save(self, fpath=".", fname=None):
         """Save a pickled representation of Model state."""
+        """
         fpathstart, fpathext = os.path.splitext(fpath)
         if fpathext == ".pkl":
             # User supplied an absolute path to a pickle file
@@ -592,11 +557,18 @@ class CNN(BaseEstimator):
         state = self.__getstate__()
         pickle.dump(state, file, protocol=pickle.HIGHEST_PROTOCOL)
         file.close()
+        """
+        print("Not implemented")
+        return None
 
     def load(self, path):
         """Load model parameters from path."""
         # logger.info("Loading from %s ..." % path)
+        """
         file = open(path, "rb")
         state = pickle.load(file)
         self.__setstate__(state)
         file.close()
+        """
+        print("Not implemented")
+        return None

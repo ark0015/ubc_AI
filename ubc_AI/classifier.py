@@ -144,24 +144,11 @@ class combinedAI(object):
             # extract pfd features beforehand
             extractfeatures(self.list_of_AIs, pfds)
 
-        input_data = []
+        # input_data = []
         for n, clf in enumerate(self.list_of_AIs):
             tr_pfds, tr_target, te_pfds, te_target = split_data(pfds, target, pct=0.75)
-            if InteractivePy:
-                clf.fit(tr_pfds, tr_target, **kwargs)
-            else:
-                input_data.append([clf, tr_pfds, tr_target, kwargs])
-
-        def threadfit(clf, tr_pfds, tr_target, kwargs):
             clf.fit(tr_pfds, tr_target, **kwargs)
-            return clf
-
-        if not InteractivePy:
-            # resultdict = threadit(threadfit, input_data)
-            resultdict = threadfit(input_data)
-
-            for n, clf in resultdict.items():
-                self.list_of_AIs[n] = clf
+            self.list_of_AIs[n] = clf
 
         self.nclasses = len(np.unique(target))
         if self.nclasses > 2 and self.strategy == "adaboost":
@@ -176,16 +163,23 @@ class combinedAI(object):
                 # use predict_prob
                 if InteractivePy or (len(pfds) < 5 * num_workers):
                     predictions = np.hstack(
-                        [clf.predict_proba(pfds) for clf in self.list_of_AIs]
+                        [
+                            clf.predict_proba(pfds)
+                            for clf in self.list_of_AIs
+                            if not isinstance(clf, ubc_AI.classifier.cnnclf)
+                        ]
                     )  # nsamples x (npred x nclasses)
-                    # print(predictions.shape)
                 else:
                     predictions = threadpredict_proba(self.list_of_AIs, pfds)
             else:
                 # use predict
                 if InteractivePy or (len(pfds) < 5 * num_workers):
                     predictions = np.transpose(
-                        [clf.predict(pfds) for clf in self.list_of_AIs]
+                        [
+                            clf.predict(pfds)
+                            for clf in self.list_of_AIs
+                            if not isinstance(clf, ubc_AI.classifier.cnnclf)
+                        ]
                     )  # nsamples x npred
                 else:
                     predictions = threadpredict(self.list_of_AIs, pfds)
@@ -463,7 +457,7 @@ class classifier(object):
             # print('%s %s 1D shift:%s'%(self.orig_class, self.feature, shift))
             data = np.array(
                 [
-                    np.roll(pfd.getdata(**self.feature), shift[i])
+                    np.roll(pfd.getdata(self.feature)[0], shift[i])
                     for i, pfd in enumerate(pfds)
                 ]
             )
@@ -473,7 +467,7 @@ class classifier(object):
                 data = np.array(
                     [
                         np.roll(
-                            pfd.getdata(**self.feature).reshape(MaxN, MaxN),
+                            pfd.getdata(self.feature)[0].reshape(MaxN, MaxN),
                             shift[i],
                             axis=1,
                         ).ravel()
@@ -486,7 +480,7 @@ class classifier(object):
                         np.array(
                             [
                                 np.roll(
-                                    pfd.getdata(**self.feature).reshape(MaxN, MaxN),
+                                    pfd.getdata(self.feature)[0].reshape(MaxN, MaxN),
                                     shift,
                                     axis=1,
                                 ).ravel()
@@ -498,7 +492,8 @@ class classifier(object):
                 )
             # print(data.shape)
         else:
-            data = np.array([pfd.getdata(**self.feature) for pfd in pfds])
+            data = np.array([pfd.getdata(self.feature)[0] for pfd in pfds])
+
         current_class = self.__class__
         self.__class__ = self.orig_class
         try:
@@ -510,12 +505,16 @@ class classifier(object):
                 ]
 
             if self.use_pca:
+                print("HELP HELP HELP", self.n_components)
                 self.pca = PCA(n_components=self.n_components).fit(data[mytarget == 1])
                 data = self.pca.transform(data)
 
             if feature in ["intervals", "subbands"] and randomshift:
                 exptargets = np.array([[t] * Nspam for t in mytarget]).ravel()
                 mytarget = exptargets
+            print(current_class, self.__class__)
+            print("data size:", np.shape(data))
+            print("target size:", np.shape(mytarget))
             results = self.fit(data, mytarget)
         except KeyboardInterrupt as detail:
             print(sys.exc_info()[0], detail)
@@ -534,7 +533,7 @@ class classifier(object):
         """
         if not type(pfds) in [list, np.ndarray]:
             pfds = [pfds]
-        data = np.array([pfd.getdata(**self.feature) for pfd in pfds])
+        data = np.array([pfd.getdata(self.feature)[0] for pfd in pfds])
         # self.test_data = data
         current_class = self.__class__
         self.__class__ = self.orig_class
@@ -573,7 +572,7 @@ class classifier(object):
         if not type(pfds) in [list, np.ndarray]:
             pfds = [pfds]
 
-        data = np.array([pfd.getdata(**self.feature) for pfd in pfds])
+        data = np.array([pfd.getdata(self.feature)[0] for pfd in pfds])
         current_class = self.__class__
         self.__class__ = self.orig_class
         if self.use_pca:
@@ -600,7 +599,7 @@ class classifier(object):
         # self.last_feature = str(self.feature)
         if not target.ndim == 1:
             target = target[..., 0]  # feature labeling
-        data = np.array([pfd.getdata(**self.feature) for pfd in pfds])
+        data = np.array([pfd.getdata(self.feature)[0] for pfd in pfds])
         current_class = self.__class__
         self.__class__ = self.orig_class
         if self.use_pca:
@@ -896,14 +895,8 @@ def extractfeatures(AIlist, pfds):
     for clf in AIlist:
         feature_dict.update(clf.feature.items())
 
-    resultdict = {}
     for pfd_idx, pfd in enumerate(pfds):
-        resultdict[pfd_idx] = pfd.getdata(feature_dict)
-    for n, pfd in resultdict.items():
-        if pfd:
-            pfds[n] = pfd
-        else:
-            raise ZeroDivisionError("ZeroDivisionError: ", pfds[n].pfdfile)
+        pfd.getdata(feature_dict)
 
 
 def threadpredict(AIlist, pfds):

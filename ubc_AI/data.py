@@ -82,7 +82,6 @@ class pfdreader(object):
                 newdata = self.extracted_feature[f"{key,value}"]
             data.append(newdata)
 
-        del pfd
         return data
 
 
@@ -210,7 +209,7 @@ class dataloader(object):
                 originaldata = pickle.load(fileobj)
                 self.pfds = originaldata["pfds"]
                 if (
-                    type(originaldata["target"]) in [list]
+                    isinstance(originaldata["target"], list)
                     or originaldata["target"].ndim == 1
                 ):
                     self.orig_target = originaldata["target"]
@@ -311,7 +310,7 @@ class dataloader(object):
         training_data, training_target, test_data, test_target
 
         """
-        if isinstance(self.pfds, type([])):
+        if isinstance(self.pfds, list):
             pfds = np.array(self.pfds)
         target = self.target
 

@@ -596,6 +596,7 @@ class NeuralNetwork(BaseEstimator):
                     lv.randomize()
 
             thetas = self.flatten_thetas()
+
             xopt = fmin_cg(
                 f=self.costFunction,
                 x0=thetas,
@@ -732,6 +733,8 @@ class NeuralNetwork(BaseEstimator):
         if isinstance(X, type([])):
             X = np.array(X)
 
+        print("X:", X)
+        print("Shape of X:", np.shape(X))
         z, h = self.forward_propagate(X)
         norm = h.sum(axis=1)
         for ni, nv in enumerate(norm):

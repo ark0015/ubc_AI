@@ -1,8 +1,8 @@
-/Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM95.90_Z0_ACCEL_Cand_1.pfd 1 1 1 1 1
-/Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM3.40_Z0_ACCEL_Cand_1.pfd 1 1 1 1 1
-/Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM212.90_Z0_ACCEL_Cand_1.pfd 1 1 1 1 1
-/Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM95.60_Z0_ACCEL_Cand_1.pfd 1 1 1 1 1
-/Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM362.60_Z0_ACCEL_Cand_2.pfd 1 1 1 1 1
+/Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM95.90_Z0_ACCEL_Cand_1.pfd 0 0 0 0 0
+/Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM3.40_Z0_ACCEL_Cand_1.pfd 0 0 0 0 0
+/Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM212.90_Z0_ACCEL_Cand_1.pfd 0 0 0 0 0
+/Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM95.60_Z0_ACCEL_Cand_1.pfd 0 0 0 0 0
+/Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM362.60_Z0_ACCEL_Cand_2.pfd 0 0 0 0 0
 /Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM360.70_Z0_ACCEL_Cand_1.pfd 1 1 1 1 1
 /Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM319.80_Z0_ACCEL_Cand_2.pfd 1 1 1 1 1
 /Users/andrewkaiser/Documents/GradSchool/Research/ubc_AI/tests/data/GBT820drift_57630_171510+2613_DM254.90_Z0_ACCEL_Cand_2.pfd 1 1 1 1 1
