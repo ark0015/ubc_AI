@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.stats as stats
 
-import ubc_AI.samples
+import ubc_AI.utils
 
 DM_range_factor = 0.2
 BINRATIO = 25

@@ -1,6 +1,8 @@
 import numpy as np
 from scipy import mgrid, ndimage
 
+from ubc_AI.prepfold import pfd
+
 
 def normalize(data):
     """data:input array of 1-3 dimentions
@@ -111,3 +113,61 @@ def downsample(a, n, align=0):
             newf = ndimage.map_coordinates(coeffs, coords, prefilter=False)
             # newf = ndimage.map_coordinates(coeffs, coords )
             return newf
+
+
+def load_pfds(loaddir=None):
+    if not loaddir:
+        loaddir = "/data/pulse-learning/Erik/"
+    SAMPLE_FILES = glob.glob(loaddir + "*.pfd")
+    pfds = []
+    for f in SAMPLE_FILES:
+        pf = pfd(f)
+        pfds.append(pf)
+    return pfds
+
+
+def extractdata(pfds, d, normalize=False, downsample=0):
+    """d in [1,2,3]"""
+    if d not in [1, 2, 3]:
+        raise "d must be in [1,2,3], but assigned %s" % d
+    data = []
+    for pf in pfds:
+        pf.dedisperse()
+        profile = pf.profs
+        D = len(profile.shape)
+        i = D - d
+        if i == 1:
+            profile = profile.sum(0)
+        elif i == 2:
+            profile = profile.sum(0).sum(0)
+        data.append(profile)
+    # data = np.ndarray(data)
+
+    return data
+
+
+def load_samples(*args, **kws):
+    return extractdata(load_pfds(), *args, **kws)
+
+
+def quick_load_samples(loaddir=None):
+    # if os.access(SAMPLE_FILES_DIR+"samples.npy", os.R_OK):
+    if not loaddir:
+        loaddir = "/data/pulse-learning/Erik/"
+    samples = []
+    for sf in glob.glob(SAMPLE_FILES_DIR + "samples_*.npy"):
+        profile = np.load(sf)
+        D = len(profile.shape)
+        # print(type(samples), samples.shape)
+        if len(args) > 0 and args[0] < 3:
+            i = D - args[0]
+            if i == 1:
+                profile = profile.sum(0)
+            elif i == 2:
+                # profile = profile.sum(1).T.sum(1)
+                profile = profile.sum(0).sum(0)
+        samples.append(profile)
+    return samples
+
+    # else:
+    # return extractdata(load_pfds(), *args, **kws)

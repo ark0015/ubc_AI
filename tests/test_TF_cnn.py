@@ -36,7 +36,6 @@ def pfd_data():
     return dataloader(datadir + "/Testing.txt")
 
 
-
 def test_CNN(pfd_data):
     cnn = TF_cnn.CNN()
     # cnn.fit(pfd_data.pfds, pfd_data.target)
@@ -76,8 +75,8 @@ def test_cnnclf(pfd_data):
         L2_reg=1.0,
     )
     cnn1.fit(pfd_data.pfds, pfd_data.target)
-    #print(cnn1.model.summary())
-    #print("1 Done.")
+    # print(cnn1.model.summary())
+    # print("1 Done.")
     cnn2 = classifier.cnnclf(
         feature={"subbands": 48},
         poolsize=[(3, 3), (2, 2)],
@@ -89,12 +88,14 @@ def test_cnnclf(pfd_data):
         L2_reg=1.0,
     )
     cnn2.fit(pfd_data.pfds, pfd_data.target)
-    #print("2 Done.")
-    #print(cnn1.model.summary())
+    # print("2 Done.")
+    # print(cnn1.model.summary())
 
 
 def test_svmclf(pfd_data):
-    svmclf1 = classifier.svmclf(gamma=0.05, C=1.0, feature={"phasebins": 64}, probability=True)
+    svmclf1 = classifier.svmclf(
+        gamma=0.05, C=1.0, feature={"phasebins": 64}, probability=True
+    )
     classifier.svmclf(
         gamma=0.005,
         C=5,
